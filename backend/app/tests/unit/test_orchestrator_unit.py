@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+
 from app.agents.orchestrator import OrchestratorAgent, _eta_seconds
 from app.agents.resource import ResourceAgent
 from app.schemas import (
@@ -125,7 +126,7 @@ async def test_dispatch_no_responders_available(db_session):
 async def test_capability_constraint_medical(db_session):
     resource_agent = ResourceAgent(db_session)
     # R1 has logistics, R2 has medical
-    r1 = await resource_agent.register_responder(
+    _ = await resource_agent.register_responder(
         ResponderCreate(
             name="Logistics",
             capabilities=[ResponderCapability.LOGISTICS],

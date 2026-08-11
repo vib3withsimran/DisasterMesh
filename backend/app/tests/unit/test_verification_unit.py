@@ -18,13 +18,11 @@ from uuid import uuid4
 
 import pytest
 
-from app.agents.verification import VerificationAgent, _SOURCE_PRIORITY
+from app.agents.verification import VerificationAgent
 from app.schemas import (
     IncidentStatus,
-    NeedsProfile,
     ProtoIncident,
     SourceType,
-    VerifiedIncident,
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -198,8 +196,18 @@ def test_confidence_capped_at_1() -> None:
     proto = _proto(source=SourceType.SATELLITE)
     many_members = [
         {"source": src}
-        for src in ["sms", "tweet", "satellite", "iot_sensor", "news",
-                    "whatsapp", "web_form", "sms", "sms", "sms"]
+        for src in [
+            "sms",
+            "tweet",
+            "satellite",
+            "iot_sensor",
+            "news",
+            "whatsapp",
+            "web_form",
+            "sms",
+            "sms",
+            "sms",
+        ]
     ]
     conf = agent._compute_confidence(many_members, proto)
     assert conf <= 1.0
@@ -218,9 +226,7 @@ def test_cluster_no_candidates_creates_new() -> None:
 def test_cluster_join_existing() -> None:
     """A single matching candidate with a cluster_id → join that cluster."""
     existing_id = f"cluster_{uuid4()}"
-    matched = [
-        ({"source": "sms", "cluster_id": existing_id}, FAKE_VECTOR, 0.85)
-    ]
+    matched = [({"source": "sms", "cluster_id": existing_id}, FAKE_VECTOR, 0.85)]
     agent = _mock_agent()
     result = agent._resolve_cluster(matched)
     assert result.cluster_id == existing_id
@@ -248,8 +254,6 @@ def test_cluster_candidates_without_cluster_id_create_new() -> None:
     agent = _mock_agent()
     result = agent._resolve_cluster(matched)
     assert result.cluster_id.startswith("cluster_")
-
-
 
 
 # ── Canonical representative ──────────────────────────────────────────────────

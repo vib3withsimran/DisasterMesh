@@ -135,7 +135,6 @@ def test_assess_empty_text_formula_floor() -> None:
     assert all(v is False for v in data["needs"].values())
 
 
-
 # ── Factor breakdown ──────────────────────────────────────────────────────────
 
 

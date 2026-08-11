@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import UTC, datetime
-from typing import Any, Awaitable, Callable
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -28,8 +28,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import CommunicationLog, DispatchRecord, ResponderRecord
 from app.schemas import (
-    Assignment,
     AssignedResponderSummary,
+    Assignment,
     IncidentStatus,
     SituationalSummary,
     VerifiedIncident,
@@ -62,24 +62,20 @@ _CITIZEN_TEMPLATES: dict[IncidentStatus, str] = {
         "Our teams are reviewing it now. Incident ID: {cluster_id}"
     ),
     IncidentStatus.VERIFIED: (
-        "🔍 Your report has been verified and is being prioritised. "
-        "Incident ID: {cluster_id}"
+        "🔍 Your report has been verified and is being prioritised. Incident ID: {cluster_id}"
     ),
     IncidentStatus.ASSIGNED: (
         "🚒 Responders have been assigned to your incident and will depart shortly. "
         "Incident ID: {cluster_id}"
     ),
     IncidentStatus.EN_ROUTE: (
-        "⏱️ Help is on the way! ETA: {eta_min} minutes. "
-        "Incident ID: {cluster_id}"
+        "⏱️ Help is on the way! ETA: {eta_min} minutes. Incident ID: {cluster_id}"
     ),
     IncidentStatus.ON_SCENE: (
-        "👨‍🚒 Responders have arrived at the scene. "
-        "Incident ID: {cluster_id}"
+        "👨‍🚒 Responders have arrived at the scene. Incident ID: {cluster_id}"
     ),
     IncidentStatus.RESOLVED: (
-        "✨ Incident {cluster_id} has been resolved. "
-        "Thank you for reporting — stay safe."
+        "✨ Incident {cluster_id} has been resolved. Thank you for reporting — stay safe."
     ),
 }
 
@@ -241,9 +237,7 @@ class CommunicationAgent:
         bool
             Delivery success flag.
         """
-        template = _CITIZEN_TEMPLATES.get(
-            new_status, "Status update for incident {cluster_id}."
-        )
+        template = _CITIZEN_TEMPLATES.get(new_status, "Status update for incident {cluster_id}.")
         body = template.format(cluster_id=cluster_id, eta_min=eta_min or "?")
 
         success, channel, error = await self._dispatch_message(phone, body)
@@ -291,21 +285,21 @@ class CommunicationAgent:
         """
         # Fetch dispatch records for this cluster
         dispatch_rows = (
-            await db.execute(
-                select(DispatchRecord).where(
-                    DispatchRecord.cluster_id == incident.cluster_id
+            (
+                await db.execute(
+                    select(DispatchRecord).where(DispatchRecord.cluster_id == incident.cluster_id)
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         # Enrich with responder names
         assigned: list[AssignedResponderSummary] = []
         for dr in dispatch_rows:
             resp_row = (
                 await db.execute(
-                    select(ResponderRecord).where(
-                        ResponderRecord.id == dr.responder_id
-                    )
+                    select(ResponderRecord).where(ResponderRecord.id == dr.responder_id)
                 )
             ).scalar_one_or_none()
             assigned.append(
@@ -340,9 +334,7 @@ class CommunicationAgent:
                 f"  • {a.responder_name} (ID: {a.responder_id})"
                 f" — ETA {eta_min} min, match {a.capability_match_score:.0%}"
             )
-        responder_block = (
-            "\n".join(responder_lines) if responder_lines else "  • None assigned yet"
-        )
+        responder_block = "\n".join(responder_lines) if responder_lines else "  • None assigned yet"
 
         now = datetime.now(UTC)
         human_summary = (
@@ -424,9 +416,7 @@ class CommunicationAgent:
                     from_=from_wa,
                     to=to_number,
                 )
-                logger.info(
-                    "WhatsApp sent to %s — Twilio SID: %s", to_number, msg.sid
-                )
+                logger.info("WhatsApp sent to %s — Twilio SID: %s", to_number, msg.sid)
                 return True, "whatsapp", None
             else:
                 msg = client.messages.create(
@@ -434,9 +424,7 @@ class CommunicationAgent:
                     from_=from_sms,
                     to=to_number,
                 )
-                logger.info(
-                    "SMS sent to %s — Twilio SID: %s", to_number, msg.sid
-                )
+                logger.info("SMS sent to %s — Twilio SID: %s", to_number, msg.sid)
                 return True, "sms", None
 
         except Exception as exc:  # noqa: BLE001
@@ -478,7 +466,6 @@ class CommunicationAgent:
         delivery_error: str | None,
     ) -> None:
         """Persist a ``CommunicationLog`` row and flush (but not commit)."""
-        from app.models import CommunicationLog  # local to avoid circular import
 
         row = CommunicationLog(
             id=str(uuid4()),

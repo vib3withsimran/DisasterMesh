@@ -83,8 +83,17 @@ class EmbeddingService:
         Uses LangChain's aembed_query() which handles async correctly.
         """
         loop = asyncio.get_event_loop()
-        # LangChain's embed_query is synchronous; run in executor
-        vector: list[float] = await loop.run_in_executor(None, self._lc.embed_query, text)
+
+        # SentenceTransformer inference is CPU-bound. Running many concurrent
+        # inference calls causes CPU contention and is slower than serializing
+        # the small inference workload.
+        async with _embedding_semaphore:
+            vector: list[float] = await loop.run_in_executor(
+                None,
+                self._lc.embed_query,
+                text,
+            )
+
         return vector
 
     async def embed_incident(self, proto: ProtoIncident) -> list[float]:
@@ -131,6 +140,7 @@ class EmbeddingService:
 # ── Module-level singleton ────────────────────────────────────────────────────
 
 _embedding_service: EmbeddingService | None = None
+_embedding_semaphore = asyncio.Semaphore(1)
 
 
 def get_embedding_service() -> EmbeddingService:

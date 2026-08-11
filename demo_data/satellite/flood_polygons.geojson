@@ -1,0 +1,200 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.225,
+              28.66
+            ],
+            [
+              77.245,
+              28.66
+            ],
+            [
+              77.245,
+              28.675
+            ],
+            [
+              77.225,
+              28.675
+            ],
+            [
+              77.225,
+              28.66
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "sentinel_001",
+        "name": "Yamuna Bazar Flood Zone",
+        "flood_depth_m": 1.8,
+        "confidence": 0.92,
+        "satellite": "Sentinel-2A",
+        "band": "NDWI",
+        "timestamp": "2026-08-08T06:06:57.871653+00:00"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.275,
+              28.668
+            ],
+            [
+              77.295,
+              28.668
+            ],
+            [
+              77.295,
+              28.682
+            ],
+            [
+              77.275,
+              28.682
+            ],
+            [
+              77.275,
+              28.668
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "sentinel_002",
+        "name": "Shahdara Flood Zone",
+        "flood_depth_m": 2.4,
+        "confidence": 0.88,
+        "satellite": "Sentinel-2B",
+        "band": "NDWI",
+        "timestamp": "2026-08-08T05:06:57.871666+00:00"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.288,
+              28.6
+            ],
+            [
+              77.308,
+              28.6
+            ],
+            [
+              77.308,
+              28.618
+            ],
+            [
+              77.288,
+              28.618
+            ],
+            [
+              77.288,
+              28.6
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "sentinel_003",
+        "name": "Mayur Vihar Flood Zone",
+        "flood_depth_m": 1.1,
+        "confidence": 0.79,
+        "satellite": "Sentinel-2A",
+        "band": "NDWI",
+        "timestamp": "2026-08-08T04:06:57.871671+00:00"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.265,
+              28.528
+            ],
+            [
+              77.285,
+              28.528
+            ],
+            [
+              77.285,
+              28.544
+            ],
+            [
+              77.265,
+              28.544
+            ],
+            [
+              77.265,
+              28.528
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "sentinel_004",
+        "name": "Okhla Flood Zone",
+        "flood_depth_m": 0.9,
+        "confidence": 0.83,
+        "satellite": "Sentinel-2B",
+        "band": "NDWI",
+        "timestamp": "2026-08-08T03:06:57.871674+00:00"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.22,
+              28.66
+            ],
+            [
+              77.235,
+              28.66
+            ],
+            [
+              77.235,
+              28.672
+            ],
+            [
+              77.22,
+              28.672
+            ],
+            [
+              77.22,
+              28.66
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "sentinel_005",
+        "name": "Kashmere Gate Flood Zone",
+        "flood_depth_m": 1.5,
+        "confidence": 0.91,
+        "satellite": "Sentinel-2A",
+        "band": "NDWI",
+        "timestamp": "2026-08-08T02:06:57.871678+00:00"
+      }
+    }
+  ]
+}

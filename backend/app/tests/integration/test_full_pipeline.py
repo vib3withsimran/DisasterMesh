@@ -17,8 +17,6 @@ Test coverage:
 
 from __future__ import annotations
 
-import asyncio
-import json
 from datetime import UTC, datetime
 
 import pytest
@@ -81,9 +79,7 @@ async def _seed_verified_incident(
         status=status,
     )
 
-    vector = await emb_svc.embed_text(
-        f"Emergency flood rescue at {lat:.4f},{lon:.4f}"
-    )
+    vector = await emb_svc.embed_text(f"Emergency flood rescue at {lat:.4f},{lon:.4f}")
     await vs.upsert_verified(incident, vector)
     return incident
 
@@ -198,13 +194,15 @@ async def test_satellite_plus_citizen_cross_source_boost(async_client, memory_ve
             "type": "Feature",
             "geometry": {
                 "type": "Polygon",
-                "coordinates": [[
-                    [77.2300, 28.6640],
-                    [77.2400, 28.6640],
-                    [77.2400, 28.6720],
-                    [77.2300, 28.6720],
-                    [77.2300, 28.6640],
-                ]],
+                "coordinates": [
+                    [
+                        [77.2300, 28.6640],
+                        [77.2400, 28.6640],
+                        [77.2400, 28.6720],
+                        [77.2300, 28.6720],
+                        [77.2300, 28.6640],
+                    ]
+                ],
             },
             "properties": {"flood_area_km2": 2.3, "source": "Sentinel-2"},
         },
@@ -238,9 +236,7 @@ async def test_satellite_plus_citizen_cross_source_boost(async_client, memory_ve
 
     results = await vs.search_nearby(lat=28.6680, lon=77.2350, radius_m=2000, limit=20)
     sources = [r.get("source") for r in results]
-    assert "satellite" in sources, (
-        f"Satellite source not found in nearby search results: {sources}"
-    )
+    assert "satellite" in sources, f"Satellite source not found in nearby search results: {sources}"
 
 
 # ---------------------------------------------------------------------------
@@ -284,9 +280,7 @@ async def test_iot_sensor_alert_pipeline(async_client, memory_vector_store):
     results = await vs.search_nearby(lat=28.6650, lon=77.2350, radius_m=500, limit=10)
     assert len(results) >= 1
     sources = [r.get("source") for r in results]
-    assert "iot_sensor" in sources, (
-        f"IoT sensor source not found in nearby results: {sources}"
-    )
+    assert "iot_sensor" in sources, f"IoT sensor source not found in nearby results: {sources}"
 
 
 # ---------------------------------------------------------------------------
@@ -322,9 +316,7 @@ async def test_severity_assessment_p1_triggers_multi_responder_dispatch(
         f"Unexpected dispatch status: {data['status']}"
     )
     assignments = data["assignments"]
-    assert len(assignments) >= 2, (
-        f"P1 incident must get ≥2 responders; got {len(assignments)}"
-    )
+    assert len(assignments) >= 2, f"P1 incident must get ≥2 responders; got {len(assignments)}"
     for a in assignments:
         assert a["responder_id"]
         assert a["eta_seconds"] >= 0
@@ -350,11 +342,11 @@ async def test_full_lifecycle_state_machine(async_client, db_session, memory_vec
     cid = incident.cluster_id
 
     transitions = [
-        (IncidentStatus.REPORTED,  IncidentStatus.VERIFIED),
-        (IncidentStatus.VERIFIED,  IncidentStatus.ASSIGNED),
-        (IncidentStatus.ASSIGNED,  IncidentStatus.EN_ROUTE),
-        (IncidentStatus.EN_ROUTE,  IncidentStatus.ON_SCENE),
-        (IncidentStatus.ON_SCENE,  IncidentStatus.RESOLVED),
+        (IncidentStatus.REPORTED, IncidentStatus.VERIFIED),
+        (IncidentStatus.VERIFIED, IncidentStatus.ASSIGNED),
+        (IncidentStatus.ASSIGNED, IncidentStatus.EN_ROUTE),
+        (IncidentStatus.EN_ROUTE, IncidentStatus.ON_SCENE),
+        (IncidentStatus.ON_SCENE, IncidentStatus.RESOLVED),
     ]
 
     for expected_old, expected_new in transitions:
@@ -431,8 +423,6 @@ async def test_websocket_receives_transition_events(async_client, memory_vector_
             assert ev2["new_status"] == "ASSIGNED"
 
 
-
-
 # ---------------------------------------------------------------------------
 # 7. CommunicationLog audit trail
 # ---------------------------------------------------------------------------
@@ -468,9 +458,7 @@ async def test_communication_log_written_for_full_pipeline(
     )
     logs = result.scalars().all()
 
-    assert len(logs) >= 1, (
-        f"Expected ≥1 CommunicationLog row for {cid}, found {len(logs)}"
-    )
+    assert len(logs) >= 1, f"Expected ≥1 CommunicationLog row for {cid}, found {len(logs)}"
     log = logs[0]
     assert log.incident_id == cid
     assert log.recipient_type == "citizen"

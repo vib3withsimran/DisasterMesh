@@ -134,15 +134,33 @@ class ParsedIntake(BaseModel):
     Extracted from raw unstructured free-text in any language (English, Hindi, Hinglish, etc.).
     """
 
-    address: str | None = Field(default=None, description="Extracted location address or landmark, e.g. 'Yamuna Bazar, Delhi'")
+    address: str | None = Field(
+        default=None,
+        description="Extracted location address or landmark, e.g. 'Yamuna Bazar, Delhi'",
+    )
     lat: float | None = Field(default=None, description="Explicit latitude if provided in raw text")
-    lon: float | None = Field(default=None, description="Explicit longitude if provided in raw text")
-    language: str = Field(default="en", description="Detected language code, e.g. 'hi', 'en', 'hinglish'")
-    incident_type: str = Field(default="other", description="Type of incident, e.g. 'flood', 'fire', 'building_collapse', 'medical_emergency'")
-    needs: NeedsProfile = Field(default_factory=NeedsProfile, description="Extracted victim needs profile")
-    urgency_level: int = Field(default=1, ge=1, le=5, description="Urgency scale 1 (low) to 5 (extreme SOS/life threat)")
-    time_reference: str | None = Field(default=None, description="Extracted time reference string, e.g. 'since 2 hours ago'")
-    cleaned_text: str = Field(default="", description="Normalized English translation / summary of the report text")
+    lon: float | None = Field(
+        default=None, description="Explicit longitude if provided in raw text"
+    )
+    language: str = Field(
+        default="en", description="Detected language code, e.g. 'hi', 'en', 'hinglish'"
+    )
+    incident_type: str = Field(
+        default="other",
+        description="Type of incident, e.g. 'flood', 'fire', 'building_collapse', 'medical_emergency'",
+    )
+    needs: NeedsProfile = Field(
+        default_factory=NeedsProfile, description="Extracted victim needs profile"
+    )
+    urgency_level: int = Field(
+        default=1, ge=1, le=5, description="Urgency scale 1 (low) to 5 (extreme SOS/life threat)"
+    )
+    time_reference: str | None = Field(
+        default=None, description="Extracted time reference string, e.g. 'since 2 hours ago'"
+    )
+    cleaned_text: str = Field(
+        default="", description="Normalized English translation / summary of the report text"
+    )
 
 
 class SeverityAssessment(BaseModel):
@@ -396,4 +414,3 @@ class CommLogEntry(BaseModel):
     delivery_error: str | None = None
 
     model_config = {"from_attributes": True}
-

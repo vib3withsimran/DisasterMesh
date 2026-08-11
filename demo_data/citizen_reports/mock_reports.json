@@ -1,0 +1,227 @@
+[
+  {
+    "id": "sms_001",
+    "source": "sms",
+    "text": "Shop basement flooded at Yamuna Bazar. Two people trapped inside. Need rescue.",
+    "lat": 28.665923,
+    "lon": 77.233783,
+    "timestamp": "2026-08-08T06:06:57.869693+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_002",
+    "source": "sms",
+    "text": "My house near Lal Qila Chowk is submerged. Water is up to my waist. Please evacuate us.",
+    "lat": 28.655646,
+    "lon": 77.241473,
+    "timestamp": "2026-08-08T06:02:27.869922+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_003",
+    "source": "sms",
+    "text": "Kashmere Gate में बाढ़ आ गई है। छत पर फंसे हैं। बचाओ।",
+    "lat": 28.667881,
+    "lon": 77.227464,
+    "timestamp": "2026-08-08T05:57:57.869928+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_004",
+    "source": "whatsapp",
+    "text": "Flooding at ISBT Delhi. Children and elderly trapped on rooftop. Send rescue.",
+    "lat": 28.669737,
+    "lon": 77.225411,
+    "timestamp": "2026-08-08T05:53:27.869931+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_005",
+    "source": "sms",
+    "text": "Water rising fast near Shahdara. Road blocked. Need boats urgently.",
+    "lat": 28.674222,
+    "lon": 77.290032,
+    "timestamp": "2026-08-08T05:48:57.869934+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_006",
+    "source": "sms",
+    "text": "Mayur Vihar Phase 1 में पानी बहुत है। दवाइयाँ खत्म हो गई हैं। अस्पताल नहीं जा सकते।",
+    "lat": 28.607441,
+    "lon": 77.295879,
+    "timestamp": "2026-08-08T05:44:27.869937+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_007",
+    "source": "sms",
+    "text": "Water rising fast near Okhla. Road blocked. Need boats urgently.",
+    "lat": 28.536018,
+    "lon": 77.273419,
+    "timestamp": "2026-08-08T05:39:57.869940+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_008",
+    "source": "whatsapp",
+    "text": "Flood near Lajpat Nagar. Elderly woman needs medical attention. No ambulance available.",
+    "lat": 28.567081,
+    "lon": 77.242411,
+    "timestamp": "2026-08-08T05:35:27.869944+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_009",
+    "source": "sms",
+    "text": "Noida Sector 18 के पास सड़क बंद है। राशन नहीं है। मदद करो।",
+    "lat": 28.567104,
+    "lon": 77.32106,
+    "timestamp": "2026-08-08T05:30:57.869947+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_010",
+    "source": "sms",
+    "text": "Water level rising quickly at Connaught Place. Ground floor completely underwater.",
+    "lat": 28.632195,
+    "lon": 77.216907,
+    "timestamp": "2026-08-08T05:26:27.869950+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_011",
+    "source": "sms",
+    "text": "Water rising fast near Yamuna Bazar. Road blocked. Need boats urgently.",
+    "lat": 28.667159,
+    "lon": 77.233372,
+    "timestamp": "2026-08-08T05:21:57.869952+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_012",
+    "source": "whatsapp",
+    "text": "Lal Qila Chowk में पानी बहुत है। दवाइयाँ खत्म हो गई हैं। अस्पताल नहीं जा सकते।",
+    "lat": 28.655358,
+    "lon": 77.240586,
+    "timestamp": "2026-08-08T05:17:27.869955+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_013",
+    "source": "sms",
+    "text": "Shop basement flooded at Kashmere Gate. Two people trapped inside. Need rescue.",
+    "lat": 28.667937,
+    "lon": 77.229123,
+    "timestamp": "2026-08-08T05:12:57.869957+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_014",
+    "source": "sms",
+    "text": "ISBT Delhi bridge submerged. Emergency vehicles cannot pass. People cut off.",
+    "lat": 28.669685,
+    "lon": 77.224539,
+    "timestamp": "2026-08-08T05:08:27.869959+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_015",
+    "source": "sms",
+    "text": "मेरा घर Shahdara के पास डूब गया है। निकालो हमें।",
+    "lat": 28.674646,
+    "lon": 77.29057,
+    "timestamp": "2026-08-08T05:03:57.869961+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_016",
+    "source": "whatsapp",
+    "text": "My house near Mayur Vihar Phase 1 is submerged. Water is up to my waist. Please evacuate us.",
+    "lat": 28.608733,
+    "lon": 77.29546,
+    "timestamp": "2026-08-08T04:59:27.869964+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_017",
+    "source": "sms",
+    "text": "Flash flood at Okhla junction. People stuck on buses. Send rescue teams.",
+    "lat": 28.535771,
+    "lon": 77.27383,
+    "timestamp": "2026-08-08T04:54:57.869966+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_018",
+    "source": "sms",
+    "text": "Lajpat Nagar के पास सड़क बंद है। राशन नहीं है। मदद करो।",
+    "lat": 28.567111,
+    "lon": 77.24344,
+    "timestamp": "2026-08-08T04:50:27.869968+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_019",
+    "source": "sms",
+    "text": "Homeless shelter near Noida Sector 18 submerged. 40 people need evacuation.",
+    "lat": 28.568773,
+    "lon": 77.321596,
+    "timestamp": "2026-08-08T04:45:57.869970+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_020",
+    "source": "whatsapp",
+    "text": "Connaught Place bridge submerged. Emergency vehicles cannot pass. People cut off.",
+    "lat": 28.63177,
+    "lon": 77.216768,
+    "timestamp": "2026-08-08T04:41:27.869972+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_021",
+    "source": "sms",
+    "text": "मेरा घर Yamuna Bazar के पास डूब गया है। निकालो हमें।",
+    "lat": 28.666027,
+    "lon": 77.233059,
+    "timestamp": "2026-08-08T04:36:57.869975+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_022",
+    "source": "sms",
+    "text": "Shop basement flooded at Lal Qila Chowk. Two people trapped inside. Need rescue.",
+    "lat": 28.656576,
+    "lon": 77.240439,
+    "timestamp": "2026-08-08T04:32:27.869977+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_023",
+    "source": "sms",
+    "text": "Water level rising quickly at Kashmere Gate. Ground floor completely underwater.",
+    "lat": 28.668386,
+    "lon": 77.228952,
+    "timestamp": "2026-08-08T04:27:57.869979+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_024",
+    "source": "whatsapp",
+    "text": "मेरा घर ISBT Delhi के पास डूब गया है। निकालो हमें।",
+    "lat": 28.670944,
+    "lon": 77.22601,
+    "timestamp": "2026-08-08T04:23:27.869981+00:00",
+    "media_urls": []
+  },
+  {
+    "id": "sms_025",
+    "source": "sms",
+    "text": "Flood near Shahdara. Elderly woman needs medical attention. No ambulance available.",
+    "lat": 28.673635,
+    "lon": 77.289022,
+    "timestamp": "2026-08-08T04:18:57.869983+00:00",
+    "media_urls": []
+  }
+]

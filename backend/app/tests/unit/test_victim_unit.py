@@ -118,8 +118,12 @@ def test_base_needs_score_zero(agent: VictimAgent) -> None:
 
 def test_base_needs_score_full(agent: VictimAgent) -> None:
     needs = NeedsProfile(
-        medical=True, shelter=True, evacuation=True,
-        rescue=True, water=True, food=True,
+        medical=True,
+        shelter=True,
+        evacuation=True,
+        rescue=True,
+        water=True,
+        food=True,
     )
     score = agent._base_needs_score(needs)
     assert score == pytest.approx(1.0)
@@ -258,8 +262,12 @@ def test_severity_score_clamped_at_1(agent: VictimAgent) -> None:
     # All 6 needs True + satellite + 5 sources + >2h old
     incident = _incident(sources=["sms", "tweet", "satellite", "sms", "sms"], age_hours=6.0)
     needs = NeedsProfile(
-        medical=True, shelter=True, evacuation=True,
-        rescue=True, water=True, food=True,
+        medical=True,
+        shelter=True,
+        evacuation=True,
+        rescue=True,
+        water=True,
+        food=True,
     )
     base = agent._base_needs_score(needs)
     mult = agent._keyword_multiplier(needs)

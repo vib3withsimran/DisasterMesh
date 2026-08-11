@@ -120,10 +120,7 @@ def get_victim_agent() -> VictimAgent:
 
 def _in_bbox(lat: float, lon: float, bbox: dict) -> bool:
     """Return True if (lat, lon) falls inside *bbox*."""
-    return (
-        bbox["lat_min"] <= lat <= bbox["lat_max"]
-        and bbox["lon_min"] <= lon <= bbox["lon_max"]
-    )
+    return bbox["lat_min"] <= lat <= bbox["lat_max"] and bbox["lon_min"] <= lon <= bbox["lon_max"]
 
 
 # ── Agent ─────────────────────────────────────────────────────────────────────

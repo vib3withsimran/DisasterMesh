@@ -34,7 +34,7 @@ async def list_responders(
 
     Examples
     --------
-    ``GET /responders`` — all responders  
+    ``GET /responders`` — all responders
     ``GET /responders?status=available`` — only available teams
     """
     agent = get_resource_agent(db)

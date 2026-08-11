@@ -7,7 +7,6 @@ from app.agents.verification import get_verification_agent
 from app.agents.victim import get_victim_agent
 from app.schemas import (
     AssessRequest,
-    Priority,
     ProtoIncident,
     SeverityAssessment,
     SourceType,
@@ -55,7 +54,9 @@ async def verify_proto_incident(proto: ProtoIncident) -> VerifiedIncident:
     return await agent.verify(proto)
 
 
-@router.post("/{proto_id}/verify", response_model=VerifiedIncident, summary="Verify an ingested report by ID")
+@router.post(
+    "/{proto_id}/verify", response_model=VerifiedIncident, summary="Verify an ingested report by ID"
+)
 async def verify_incident_by_id(proto_id: str) -> VerifiedIncident:
     """
     Fetch a proto incident by ID from Qdrant vector store and run the

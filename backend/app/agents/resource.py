@@ -54,7 +54,9 @@ def _record_to_schema(rec: ResponderRecord) -> Responder:
         for k, v in (rec.capabilities or {}).items()
         if v and k in ResponderCapability.__members__.values()  # type: ignore[attr-defined]
     ]
-    status = ResponderStatus(rec.current_status) if rec.current_status else ResponderStatus.AVAILABLE
+    status = (
+        ResponderStatus(rec.current_status) if rec.current_status else ResponderStatus.AVAILABLE
+    )
     return Responder(
         id=rec.id,
         name=rec.name,
@@ -225,9 +227,7 @@ class ResourceAgent:
         nearby: list[tuple[float, ResponderRecord]] = []
         if incident.lat is not None and incident.lon is not None:
             for rec in all_available:
-                dist = _haversine_m(
-                    incident.lat, incident.lon, rec.current_lat, rec.current_lon
-                )
+                dist = _haversine_m(incident.lat, incident.lon, rec.current_lat, rec.current_lon)
                 if dist <= radius_m:
                     nearby.append((dist, rec))
         else:

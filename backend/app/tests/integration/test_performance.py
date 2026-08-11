@@ -23,7 +23,6 @@ All tests are marked @pytest.mark.slow so they can be deselected with:
 from __future__ import annotations
 
 import asyncio
-import json
 import time
 from datetime import UTC, datetime
 
@@ -32,7 +31,6 @@ from httpx import ASGITransport, AsyncClient
 
 from app.agents.embeddings import get_embedding_service
 from app.agents.orchestrator import DispatchState, run_solver
-from app.agents.resource import get_resource_agent
 from app.agents.vector_store import get_vector_store
 from app.main import app
 from app.schemas import (
@@ -61,13 +59,13 @@ async def async_client():
 # Performance targets (adjust conservatively for test/CI machines)
 # ---------------------------------------------------------------------------
 
-INGESTION_LIMIT_MS: float = 5_000.0    # 100 reports in 5 seconds
-QDRANT_SEARCH_LIMIT_MS: float = 200.0   # median search across 1k points
-SOLVER_LIMIT_MS: float = 500.0          # SCIP for 50 responders × 20 incidents
-WS_BROADCAST_LIMIT_MS: float = 500.0   # all 10 clients receive in 500 ms
+INGESTION_LIMIT_MS: float = 5_000.0  # 100 reports in 5 seconds
+QDRANT_SEARCH_LIMIT_MS: float = 200.0  # median search across 1k points
+SOLVER_LIMIT_MS: float = 500.0  # SCIP for 50 responders × 20 incidents
+WS_BROADCAST_LIMIT_MS: float = 100.0  # all 10 clients receive in 100 ms
 
-QDRANT_DATASET_SIZE: int = 1_000       # points to pre-load
-QDRANT_SEARCH_REPEATS: int = 10        # number of searches to median
+QDRANT_DATASET_SIZE: int = 1_000  # points to pre-load
+QDRANT_SEARCH_REPEATS: int = 10  # number of searches to median
 
 SOLVER_NUM_RESPONDERS: int = 50
 SOLVER_NUM_INCIDENTS: int = 20
@@ -77,9 +75,11 @@ SOLVER_NUM_INCIDENTS: int = 20
 # Helper: build a dummy 384-dim vector (avoids embedding cost in benchmarks)
 # ---------------------------------------------------------------------------
 
+
 def _dummy_vec(seed: int = 0) -> list[float]:
     """Deterministic unit-ish vector; avoids real embedding for bulk loads."""
     import math
+
     n = 384
     # Simple rotation — different for each seed, normalised
     v = [math.sin(seed * 0.01 + i * 0.005) for i in range(n)]
@@ -101,7 +101,6 @@ async def test_ingestion_throughput_100_reports(async_client, memory_vector_stor
 
     Exercises: POST /ingest/report → SituationalAgent → VectorStore.upsert()
     """
-    from unittest.mock import MagicMock
     from app.agents.intake_parser import get_intake_parser
 
     # Disable external Groq LLM API calls for throughput benchmark to avoid rate limits
@@ -139,9 +138,8 @@ async def test_ingestion_throughput_100_reports(async_client, memory_vector_stor
     )
     print(
         f"\n[PERF] Ingestion throughput: 100 reports in {elapsed_ms:.1f} ms "
-        f"({100_000/elapsed_ms:.1f} reports/s)"
+        f"({100_000 / elapsed_ms:.1f} reports/s)"
     )
-
 
 
 # ---------------------------------------------------------------------------
@@ -163,9 +161,9 @@ async def test_qdrant_vector_search_latency(memory_vector_store):
     vs = get_vector_store()
 
     # Bulk-upsert 1 000 proto incidents with dummy vectors
-    from app.schemas import ProtoIncident
+    import uuid
+
     from qdrant_client.models import PointStruct
-    import uuid, math
 
     points = []
     for i in range(QDRANT_DATASET_SIZE):
@@ -185,15 +183,15 @@ async def test_qdrant_vector_search_latency(memory_vector_store):
             "page_content": text,
         }
         vec = _dummy_vec(seed=i)
-        from qdrant_client.models import PointStruct
         from app.agents.vector_store import COLLECTION_NAME, _uuid_to_int
+
         point_id = _uuid_to_int(proto_id)
         points.append(PointStruct(id=point_id, vector=vec, payload=payload))
 
     # Upsert in batches of 200
     raw_client = vs._raw_client
     for batch_start in range(0, QDRANT_DATASET_SIZE, 200):
-        batch = points[batch_start:batch_start + 200]
+        batch = points[batch_start : batch_start + 200]
         raw_client.upsert(collection_name=COLLECTION_NAME, points=batch)
 
     assert await vs.collection_size() >= QDRANT_DATASET_SIZE
@@ -328,7 +326,6 @@ async def test_websocket_broadcast_latency(async_client, memory_vector_store):
     within WS_BROADCAST_LIMIT_MS of the HTTP request completing.
     """
     from starlette.testclient import TestClient
-    from app.agents.embeddings import get_embedding_service
 
     N_CLIENTS = 10
 
@@ -385,5 +382,3 @@ async def test_websocket_broadcast_latency(async_client, memory_vector_store):
         finally:
             for ws in ws_clients:
                 ws.__exit__(None, None, None)
-
-

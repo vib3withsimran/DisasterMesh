@@ -40,6 +40,7 @@ import logging
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 from math import asin, cos, radians, sin, sqrt
+from typing import Any
 from uuid import uuid4
 
 from app.agents.embeddings import EmbeddingService, get_embedding_service
@@ -57,23 +58,23 @@ logger = logging.getLogger(__name__)
 
 # ── Tuneable constants ────────────────────────────────────────────────────────
 
-GEO_RADIUS_M: float = 150.0          # metres — spatial dedup window
+GEO_RADIUS_M: float = 150.0  # metres — spatial dedup window
 TIME_WINDOW_SECONDS: float = 30 * 60  # 30 minutes — temporal dedup window
-SIMILARITY_THRESHOLD: float = 0.7    # cosine — semantic dedup threshold
+SIMILARITY_THRESHOLD: float = 0.7  # cosine — semantic dedup threshold
 
 # Confidence scoring parameters
-CORROBORATION_SATURATION: int = 5    # n sources needed for full corroboration
-CROSS_SOURCE_WEIGHT: float = 0.15    # bonus per additional distinct source type
+CORROBORATION_SATURATION: int = 5  # n sources needed for full corroboration
+CROSS_SOURCE_WEIGHT: float = 0.15  # bonus per additional distinct source type
 
 # Source priority for canonical representative selection (higher = preferred)
 _SOURCE_PRIORITY: dict[SourceType, int] = {
-    SourceType.SATELLITE:  4,
+    SourceType.SATELLITE: 4,
     SourceType.IOT_SENSOR: 3,
-    SourceType.SMS:        2,
-    SourceType.WHATSAPP:   2,
-    SourceType.WEB_FORM:   2,
-    SourceType.NEWS:       1,
-    SourceType.TWEET:      1,
+    SourceType.SMS: 2,
+    SourceType.WHATSAPP: 2,
+    SourceType.WEB_FORM: 2,
+    SourceType.NEWS: 1,
+    SourceType.TWEET: 1,
 }
 
 
@@ -177,11 +178,12 @@ class VerificationAgent:
         )
 
         # Step 3: Compute cosine similarity; keep candidates ≥ SIMILARITY_THRESHOLD
-        matched: list[tuple[dict, list[float], float]] = []  # (payload, vec, sim)
+        matched: list[tuple[dict[str, Any], list[float], float]] = []  # (payload, vec, sim)
         for payload, vec in candidate_pairs:
-            sim = EmbeddingService.cosine_similarity(proto_vector, vec)
-            if sim >= self.similarity_threshold:
-                matched.append((payload, vec, sim))
+            if isinstance(payload, dict) and isinstance(vec, list):
+                sim = EmbeddingService.cosine_similarity(proto_vector, vec)
+                if sim >= self.similarity_threshold:
+                    matched.append((payload, vec, sim))
 
         logger.debug(
             "verify(%s): %d semantic matches (sim≥%.2f)",
@@ -242,7 +244,7 @@ class VerificationAgent:
 
     def _resolve_cluster(
         self,
-        matched: list[tuple[dict, list[float], float]],
+        matched: list[tuple[dict[str, Any], list[float], float]],
     ) -> ClusterMatchResult:
         """
         Determine which cluster to join (or create a new one).
@@ -255,11 +257,7 @@ class VerificationAgent:
             new_id = f"cluster_{uuid4()}"
             return ClusterMatchResult(cluster_id=new_id)
 
-        cluster_votes: list[str] = [
-            m[0]["cluster_id"]
-            for m in matched
-            if m[0].get("cluster_id")
-        ]
+        cluster_votes: list[str] = [m[0]["cluster_id"] for m in matched if m[0].get("cluster_id")]
 
         if cluster_votes:
             most_common_id = Counter(cluster_votes).most_common(1)[0][0]
@@ -305,13 +303,9 @@ class VerificationAgent:
         corroboration_factor = min(1.0, n_corroborating / CORROBORATION_SATURATION)
 
         # Distinct source types across cluster + new proto
-        sources: set[str] = {
-            m.get("source", "") for m in cluster_members
-        }
+        sources: set[str] = {m.get("source", "") for m in cluster_members}
         sources.add(
-            new_proto.source.value
-            if hasattr(new_proto.source, "value")
-            else str(new_proto.source)
+            new_proto.source.value if hasattr(new_proto.source, "value") else str(new_proto.source)
         )
         sources.discard("")  # remove empty strings if any
         n_distinct = len(sources)

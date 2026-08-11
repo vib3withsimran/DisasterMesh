@@ -328,6 +328,53 @@ class SituationalAgent:
 
         return None
 
+    async def normalize_report(
+        self,
+        text: str,
+        source: str | SourceType = "sms",
+        lat: float | None = None,
+        lon: float | None = None,
+        address: str | None = None,
+        media_urls: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        timestamp: datetime | None = None,
+    ) -> ProtoIncident:
+        """Helper to build a ProtoIncident from raw attributes and normalize it."""
+        st = SourceType(source) if isinstance(source, str) else source
+        report_input = CitizenReportInput(
+            source=st,
+            text=text,
+            lat=lat,
+            lon=lon,
+            address=address,
+            media_urls=media_urls or [],
+            timestamp=timestamp,
+        )
+        proto = await self.process_citizen_report(report_input)
+        if metadata:
+            proto.metadata.update(metadata)
+        return proto
+
+    async def ingest(self, proto: ProtoIncident) -> None:
+        """Ingest normalized ProtoIncident into VerificationAgent."""
+        from app.agents.verification import get_verification_agent
+
+        verifier = get_verification_agent()
+        await verifier.verify(proto)
+
+
+# ── Module-level singleton ────────────────────────────────────────────────────
+
+_situational_agent: SituationalAgent | None = None
+
+
+def get_situational_agent() -> SituationalAgent:
+    """Return the shared SituationalAgent singleton."""
+    global _situational_agent
+    if _situational_agent is None:
+        _situational_agent = SituationalAgent()
+    return _situational_agent
+
 
 # ── Module-level helpers (also used in tests) ─────────────────────────────────
 

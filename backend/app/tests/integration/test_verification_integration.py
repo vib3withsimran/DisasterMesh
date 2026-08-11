@@ -16,7 +16,6 @@ Run:
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
 
 import pytest
 from qdrant_client import QdrantClient
@@ -93,7 +92,9 @@ async def _ingest(store: VectorStore, embedder: EmbeddingService, proto: ProtoIn
 
 
 @pytest.mark.anyio
-async def test_five_reports_same_event_single_cluster(agent, vector_store, embedding_service) -> None:
+async def test_five_reports_same_event_single_cluster(
+    agent, vector_store, embedding_service
+) -> None:
     """
     Five slightly different wordings of the same flood event at the same
     location should all cluster into a single cluster_id.
@@ -150,14 +151,16 @@ async def test_cross_source_higher_confidence(agent, vector_store, embedding_ser
         await _ingest(vector_store, embedding_service, p)
     sat_p = _proto(
         text="Sentinel-2 flood polygon: Connaught Place area",
-        lat=28.6325, lon=77.2195,
+        lat=28.6325,
+        lon=77.2195,
         source=SourceType.SATELLITE,
     )
     await _ingest(vector_store, embedding_service, sat_p)
 
     cross_proto = _proto(
         text="Water rising at Connaught Place",
-        lat=28.6325, lon=77.2195,
+        lat=28.6325,
+        lon=77.2195,
         source=SourceType.SATELLITE,
     )
     cross_result = await agent.verify(cross_proto)
@@ -194,7 +197,9 @@ async def test_geo_outside_radius_separate_cluster(agent, vector_store, embeddin
 
 
 @pytest.mark.anyio
-async def test_temporal_outside_window_separate_cluster(agent, vector_store, embedding_service) -> None:
+async def test_temporal_outside_window_separate_cluster(
+    agent, vector_store, embedding_service
+) -> None:
     """
     An identical report that is 35 minutes old (outside the 30-min window)
     should land in a separate cluster from a fresh report at the same location.
@@ -222,7 +227,9 @@ async def test_temporal_outside_window_separate_cluster(agent, vector_store, emb
 
 
 @pytest.mark.anyio
-async def test_semantic_below_threshold_separate_cluster(agent, vector_store, embedding_service) -> None:
+async def test_semantic_below_threshold_separate_cluster(
+    agent, vector_store, embedding_service
+) -> None:
     """
     Same location and time window but semantically unrelated text should
     produce a new cluster (not merge with the nearby one).
@@ -269,14 +276,16 @@ async def test_verify_returns_verified_status(agent, vector_store, embedding_ser
 
 
 @pytest.mark.anyio
-async def test_canonical_representative_is_satellite(agent, vector_store, embedding_service) -> None:
+async def test_canonical_representative_is_satellite(
+    agent, vector_store, embedding_service
+) -> None:
     """
     When a cluster contains both SMS and satellite reports, the satellite
     report's source should appear in source_provenance of the merged cluster.
 
     Both reports must be semantically similar (cosine ≥ 0.7) so they merge.
     """
-    sat_lat = YAMUNA_LAT + 0.0003   # ~33 m north — inside 150 m radius
+    sat_lat = YAMUNA_LAT + 0.0003  # ~33 m north — inside 150 m radius
     sat_lon = YAMUNA_LON
 
     # Use very similar text so the two protos merge semantically
@@ -309,7 +318,6 @@ async def test_canonical_representative_is_satellite(agent, vector_store, embedd
     assert SourceType.SATELLITE in all_sources, (
         f"Expected satellite in combined provenance, got {all_sources}"
     )
-
 
 
 @pytest.mark.anyio

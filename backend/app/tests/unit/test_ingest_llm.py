@@ -49,7 +49,9 @@ def test_ingest_report_with_llm_parsed(monkeypatch: pytest.MonkeyPatch) -> None:
         cleaned_text="Flooding at Yamuna Bazar, rescue needed",
     )
 
-    with patch("app.agents.intake_parser.IntakeParserAgent.parse", new_callable=AsyncMock) as mock_parse:
+    with patch(
+        "app.agents.intake_parser.IntakeParserAgent.parse", new_callable=AsyncMock
+    ) as mock_parse:
         mock_parse.return_value = mock_parsed
 
         response = client.post(
@@ -80,7 +82,9 @@ def test_ingest_report_gps_overrides_llm_coords(monkeypatch: pytest.MonkeyPatch)
         cleaned_text="Flood at location",
     )
 
-    with patch("app.agents.intake_parser.IntakeParserAgent.parse", new_callable=AsyncMock) as mock_parse:
+    with patch(
+        "app.agents.intake_parser.IntakeParserAgent.parse", new_callable=AsyncMock
+    ) as mock_parse:
         mock_parse.return_value = mock_parsed
 
         # User's device GPS gives exact location (28.5, 77.1)

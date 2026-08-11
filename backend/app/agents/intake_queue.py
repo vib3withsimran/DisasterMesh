@@ -86,7 +86,8 @@ class IntakeQueue:
                 raw_item = await client.lpop(_QUEUE_KEY)
                 if not raw_item:
                     break
-                items_to_process.append(json.loads(raw_item))
+                if isinstance(raw_item, (str, bytes)):
+                    items_to_process.append(json.loads(raw_item))
             await client.aclose()
         except Exception as err:
             logger.debug("Redis queue pop skipped/failed: %s", err)
@@ -103,6 +104,7 @@ class IntakeQueue:
         processed_count = 0
 
         from app.agents.situational import get_situational_agent
+
         situational_agent = get_situational_agent()
 
         for item in items_to_process:
@@ -113,7 +115,11 @@ class IntakeQueue:
 
             try:
                 parsed = await parser.parse(raw_text)
-                logger.info("Successfully retried LLM parse for msg=%s: %s", msg_id, parsed.cleaned_text[:50])
+                logger.info(
+                    "Successfully retried LLM parse for msg=%s: %s",
+                    msg_id,
+                    parsed.cleaned_text[:50],
+                )
 
                 # Construct ProtoIncident using parsed result
                 proto = await situational_agent.normalize_report(
@@ -131,16 +137,23 @@ class IntakeQueue:
                         "time_reference": parsed.time_reference,
                         "extracted_needs": parsed.needs.model_dump(),
                     },
+                    timestamp=raw_payload.get("timestamp"),
                 )
                 await situational_agent.ingest(proto)
                 processed_count += 1
 
             except Exception as parse_err:
-                logger.warning("Retry parsing failed for msg=%s (retries=%d): %s", msg_id, retries, parse_err)
+                logger.warning(
+                    "Retry parsing failed for msg=%s (retries=%d): %s", msg_id, retries, parse_err
+                )
                 if retries + 1 < _MAX_RETRIES:
                     await self.enqueue(msg_id, raw_payload, retries=retries + 1)
                 else:
-                    logger.error("Max retries (%d) reached for msg=%s. Falling back to basic ingestion.", _MAX_RETRIES, msg_id)
+                    logger.error(
+                        "Max retries (%d) reached for msg=%s. Falling back to basic ingestion.",
+                        _MAX_RETRIES,
+                        msg_id,
+                    )
                     # Fallback standard ingest
                     proto = await situational_agent.normalize_report(
                         text=raw_text,
@@ -149,6 +162,7 @@ class IntakeQueue:
                         lon=raw_payload.get("lon"),
                         address=raw_payload.get("address"),
                         media_urls=raw_payload.get("media_urls", []),
+                        timestamp=raw_payload.get("timestamp"),
                     )
                     await situational_agent.ingest(proto)
 

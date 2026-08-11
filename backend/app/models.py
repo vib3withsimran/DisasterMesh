@@ -137,10 +137,7 @@ class ResponderRecord(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<ResponderRecord id={self.id!r} name={self.name!r} "
-            f"status={self.current_status!r}>"
-        )
+        return f"<ResponderRecord id={self.id!r} name={self.name!r} status={self.current_status!r}>"
 
 
 # ── Phase 5: Dispatch Records ─────────────────────────────────────────────────
@@ -222,9 +219,7 @@ class CommunicationLog(Base):
     )
 
     # Delivery outcome
-    delivery_status: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="mock"
-    )
+    delivery_status: Mapped[str] = mapped_column(String(16), nullable=False, default="mock")
     delivery_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def __repr__(self) -> str:
@@ -232,4 +227,3 @@ class CommunicationLog(Base):
             f"<CommunicationLog id={self.id!r} incident={self.incident_id!r} "
             f"type={self.message_type!r} status={self.delivery_status!r}>"
         )
-

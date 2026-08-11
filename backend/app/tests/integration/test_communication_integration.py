@@ -31,7 +31,6 @@ from app.schemas import (
     VerifiedIncident,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -68,9 +67,7 @@ async def _seed_incident(
     )
 
     emb_svc = get_embedding_service()
-    vector = await emb_svc.embed_text(
-        f"Medical emergency at {incident.lat},{incident.lon}"
-    )
+    vector = await emb_svc.embed_text(f"Medical emergency at {incident.lat},{incident.lon}")
     vs = get_vector_store()
     await vs.upsert_verified(incident, vector)
     return incident
@@ -127,9 +124,7 @@ async def test_unknown_incident_returns_404(async_client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_transition_with_citizen_phone_writes_comm_log(
-    async_client, db_session
-):
+async def test_transition_with_citizen_phone_writes_comm_log(async_client, db_session):
     """When citizen_phone is provided, a CommunicationLog row must be written."""
     from sqlalchemy import select
 
@@ -155,12 +150,14 @@ async def test_transition_with_citizen_phone_writes_comm_log(
 
     # Verify the CommunicationLog was written
     rows = (
-        await db_session.execute(
-            select(CommunicationLog).where(
-                CommunicationLog.incident_id == cluster_id
+        (
+            await db_session.execute(
+                select(CommunicationLog).where(CommunicationLog.incident_id == cluster_id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     log = rows[0]
     assert log.recipient_type == "citizen"
@@ -247,9 +244,7 @@ async def test_comms_log_shows_written_entries(async_client, db_session):
             },
         )
 
-    resp = await async_client.get(
-        f"/communications/logs?incident_id={cluster_id}"
-    )
+    resp = await async_client.get(f"/communications/logs?incident_id={cluster_id}")
     assert resp.status_code == 200
     logs = resp.json()
     assert len(logs) == 1
@@ -279,6 +274,7 @@ async def test_websocket_connects_and_receives_broadcast():
     Verify that connected WebSocket clients receive broadcast lifecycle events.
     """
     from starlette.testclient import TestClient
+
     from app.routers.communication import manager
 
     cluster_id = "cluster_integ-ws-001"
@@ -286,12 +282,14 @@ async def test_websocket_connects_and_receives_broadcast():
     with TestClient(app) as client:
         with client.websocket_connect("/ws/updates") as ws:
             # Directly trigger broadcast on the ConnectionManager
-            await manager.broadcast({
-                "event": "lifecycle_transition",
-                "cluster_id": cluster_id,
-                "old_status": "VERIFIED",
-                "new_status": "ASSIGNED",
-            })
+            await manager.broadcast(
+                {
+                    "event": "lifecycle_transition",
+                    "cluster_id": cluster_id,
+                    "old_status": "VERIFIED",
+                    "new_status": "ASSIGNED",
+                }
+            )
 
             # Check if WS received broadcast event
             data = ws.receive_json()
@@ -299,8 +297,6 @@ async def test_websocket_connects_and_receives_broadcast():
             assert data["cluster_id"] == cluster_id
             assert data["old_status"] == "VERIFIED"
             assert data["new_status"] == "ASSIGNED"
-
-
 
 
 def test_websocket_endpoint_accepts_connection():
@@ -312,4 +308,3 @@ def test_websocket_endpoint_accepts_connection():
     with TestClient(app) as client:
         with client.websocket_connect("/ws/updates") as ws:
             ws.send_text("ping")
-

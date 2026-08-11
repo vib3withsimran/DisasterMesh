@@ -253,7 +253,9 @@ async def run_solver(state: DispatchState) -> DispatchState:
     for cap_name, is_req in req.items():
         if not is_req:
             continue
-        capable = [i for i, r in enumerate(available) if cap_name in {c.value for c in r.capabilities}]
+        capable = [
+            i for i, r in enumerate(available) if cap_name in {c.value for c in r.capabilities}
+        ]
         if capable:
             solver.Add(solver.Sum([x[i] for i in capable]) >= 1)
 
@@ -343,7 +345,11 @@ async def commit_assignments(state: DispatchState) -> DispatchState:
 
     if not assigned_indices:
         status = DispatchStatus.NO_RESPONDERS if not available else DispatchStatus.SOLVER_INFEASIBLE
-        reason = "No responders available" if not available else "No responders could be assigned (solver infeasible + heuristic empty)"
+        reason = (
+            "No responders available"
+            if not available
+            else "No responders could be assigned (solver infeasible + heuristic empty)"
+        )
         result = DispatchResult(
             cluster_id=incident.cluster_id,
             status=status,

@@ -8,6 +8,7 @@ geo-radius availability filtering, and capability match scoring.
 from __future__ import annotations
 
 import pytest
+
 from app.agents.resource import ResourceAgent
 from app.schemas import (
     LocationUpdate,
@@ -46,12 +47,8 @@ async def test_register_responder(db_session):
 @pytest.mark.asyncio
 async def test_list_responders_all(db_session):
     agent = ResourceAgent(db_session)
-    r1 = await agent.register_responder(
-        ResponderCreate(name="R1", lat=28.6, lon=77.2)
-    )
-    r2 = await agent.register_responder(
-        ResponderCreate(name="R2", lat=28.7, lon=77.3)
-    )
+    r1 = await agent.register_responder(ResponderCreate(name="R1", lat=28.6, lon=77.2))
+    r2 = await agent.register_responder(ResponderCreate(name="R2", lat=28.7, lon=77.3))
     all_resp = await agent.list_responders()
     assert len(all_resp) >= 2
     ids = [r.id for r in all_resp]
@@ -62,15 +59,9 @@ async def test_list_responders_all(db_session):
 @pytest.mark.asyncio
 async def test_list_responders_by_status(db_session):
     agent = ResourceAgent(db_session)
-    r1 = await agent.register_responder(
-        ResponderCreate(name="R1", lat=28.6, lon=77.2)
-    )
-    r2 = await agent.register_responder(
-        ResponderCreate(name="R2", lat=28.7, lon=77.3)
-    )
-    await agent.update_responder_status(
-        r2.id, StatusUpdate(status=ResponderStatus.ASSIGNED)
-    )
+    r1 = await agent.register_responder(ResponderCreate(name="R1", lat=28.6, lon=77.2))
+    r2 = await agent.register_responder(ResponderCreate(name="R2", lat=28.7, lon=77.3))
+    await agent.update_responder_status(r2.id, StatusUpdate(status=ResponderStatus.ASSIGNED))
 
     avail = await agent.list_responders(status_filter=ResponderStatus.AVAILABLE)
     assigned = await agent.list_responders(status_filter=ResponderStatus.ASSIGNED)
@@ -84,13 +75,9 @@ async def test_list_responders_by_status(db_session):
 async def test_get_available_responders_radius(db_session):
     agent = ResourceAgent(db_session)
     # R1 in Delhi Yamuna Bazar
-    r1 = await agent.register_responder(
-        ResponderCreate(name="Near", lat=28.6667, lon=77.2333)
-    )
+    r1 = await agent.register_responder(ResponderCreate(name="Near", lat=28.6667, lon=77.2333))
     # R2 in Mumbai (~1100 km away)
-    r2 = await agent.register_responder(
-        ResponderCreate(name="Far", lat=18.9400, lon=72.8240)
-    )
+    r2 = await agent.register_responder(ResponderCreate(name="Far", lat=18.9400, lon=72.8240))
 
     incident = VerifiedIncident(
         cluster_id="cluster_test",
@@ -110,15 +97,9 @@ async def test_get_available_responders_radius(db_session):
 @pytest.mark.asyncio
 async def test_get_available_responders_excludes_assigned(db_session):
     agent = ResourceAgent(db_session)
-    r1 = await agent.register_responder(
-        ResponderCreate(name="Avail", lat=28.6667, lon=77.2333)
-    )
-    r2 = await agent.register_responder(
-        ResponderCreate(name="Busy", lat=28.6667, lon=77.2333)
-    )
-    await agent.update_responder_status(
-        r2.id, StatusUpdate(status=ResponderStatus.ASSIGNED)
-    )
+    r1 = await agent.register_responder(ResponderCreate(name="Avail", lat=28.6667, lon=77.2333))
+    r2 = await agent.register_responder(ResponderCreate(name="Busy", lat=28.6667, lon=77.2333))
+    await agent.update_responder_status(r2.id, StatusUpdate(status=ResponderStatus.ASSIGNED))
 
     incident = VerifiedIncident(
         cluster_id="cluster_test",
@@ -136,12 +117,8 @@ async def test_get_available_responders_excludes_assigned(db_session):
 @pytest.mark.asyncio
 async def test_update_location(db_session):
     agent = ResourceAgent(db_session)
-    r1 = await agent.register_responder(
-        ResponderCreate(name="Mover", lat=28.6, lon=77.2)
-    )
-    updated = await agent.update_responder_location(
-        r1.id, LocationUpdate(lat=28.65, lon=77.25)
-    )
+    r1 = await agent.register_responder(ResponderCreate(name="Mover", lat=28.6, lon=77.2))
+    updated = await agent.update_responder_location(r1.id, LocationUpdate(lat=28.65, lon=77.25))
     assert updated.lat == 28.65
     assert updated.lon == 77.25
     assert updated.last_location_update is not None
@@ -150,14 +127,10 @@ async def test_update_location(db_session):
 @pytest.mark.asyncio
 async def test_update_status_to_assigned(db_session):
     agent = ResourceAgent(db_session)
-    r1 = await agent.register_responder(
-        ResponderCreate(name="Worker", lat=28.6, lon=77.2)
-    )
+    r1 = await agent.register_responder(ResponderCreate(name="Worker", lat=28.6, lon=77.2))
     updated = await agent.update_responder_status(
         r1.id,
-        StatusUpdate(
-            status=ResponderStatus.ASSIGNED, incident_id="inc_123", eta_minutes=15
-        ),
+        StatusUpdate(status=ResponderStatus.ASSIGNED, incident_id="inc_123", eta_minutes=15),
     )
     assert updated.status == ResponderStatus.ASSIGNED
     assert updated.assigned_incident_id == "inc_123"
@@ -167,14 +140,10 @@ async def test_update_status_to_assigned(db_session):
 @pytest.mark.asyncio
 async def test_update_status_to_available(db_session):
     agent = ResourceAgent(db_session)
-    r1 = await agent.register_responder(
-        ResponderCreate(name="Worker", lat=28.6, lon=77.2)
-    )
+    r1 = await agent.register_responder(ResponderCreate(name="Worker", lat=28.6, lon=77.2))
     await agent.update_responder_status(
         r1.id,
-        StatusUpdate(
-            status=ResponderStatus.ASSIGNED, incident_id="inc_123", eta_minutes=15
-        ),
+        StatusUpdate(status=ResponderStatus.ASSIGNED, incident_id="inc_123", eta_minutes=15),
     )
     # Reset to available
     reset = await agent.update_responder_status(
@@ -187,7 +156,7 @@ async def test_update_status_to_available(db_session):
 
 def test_capability_score_perfect_match(db_session):
     agent = ResourceAgent(db_session)
-    resp = ResponderCreate(
+    _ = ResponderCreate(
         name="Team",
         capabilities=[ResponderCapability.MEDICAL, ResponderCapability.RESCUE],
         lat=0,

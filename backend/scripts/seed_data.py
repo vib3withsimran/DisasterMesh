@@ -18,6 +18,7 @@ import json
 import random
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 BASE = Path(__file__).parent.parent.parent / "demo_data"
 
@@ -26,7 +27,7 @@ random.seed(42)
 
 # ── Locations — real Delhi-NCR flood-prone coordinates ────────────────────────
 
-LOCATIONS = [
+LOCATIONS: list[dict[str, Any]] = [
     {"name": "Yamuna Bazar", "lat": 28.6667, "lon": 77.2333},
     {"name": "Lal Qila Chowk", "lat": 28.6562, "lon": 77.2410},
     {"name": "Kashmere Gate", "lat": 28.6677, "lon": 77.2284},
@@ -93,8 +94,11 @@ SATELLITE_POLYGONS = [
     {
         "name": "Yamuna Bazar Flood Zone",
         "polygon": [
-            [77.225, 28.660], [77.245, 28.660],
-            [77.245, 28.675], [77.225, 28.675], [77.225, 28.660],
+            [77.225, 28.660],
+            [77.245, 28.660],
+            [77.245, 28.675],
+            [77.225, 28.675],
+            [77.225, 28.660],
         ],
         "flood_depth_m": 1.8,
         "confidence": 0.92,
@@ -104,8 +108,11 @@ SATELLITE_POLYGONS = [
     {
         "name": "Shahdara Flood Zone",
         "polygon": [
-            [77.275, 28.668], [77.295, 28.668],
-            [77.295, 28.682], [77.275, 28.682], [77.275, 28.668],
+            [77.275, 28.668],
+            [77.295, 28.668],
+            [77.295, 28.682],
+            [77.275, 28.682],
+            [77.275, 28.668],
         ],
         "flood_depth_m": 2.4,
         "confidence": 0.88,
@@ -115,8 +122,11 @@ SATELLITE_POLYGONS = [
     {
         "name": "Mayur Vihar Flood Zone",
         "polygon": [
-            [77.288, 28.600], [77.308, 28.600],
-            [77.308, 28.618], [77.288, 28.618], [77.288, 28.600],
+            [77.288, 28.600],
+            [77.308, 28.600],
+            [77.308, 28.618],
+            [77.288, 28.618],
+            [77.288, 28.600],
         ],
         "flood_depth_m": 1.1,
         "confidence": 0.79,
@@ -126,8 +136,11 @@ SATELLITE_POLYGONS = [
     {
         "name": "Okhla Flood Zone",
         "polygon": [
-            [77.265, 28.528], [77.285, 28.528],
-            [77.285, 28.544], [77.265, 28.544], [77.265, 28.528],
+            [77.265, 28.528],
+            [77.285, 28.528],
+            [77.285, 28.544],
+            [77.265, 28.544],
+            [77.265, 28.528],
         ],
         "flood_depth_m": 0.9,
         "confidence": 0.83,
@@ -137,8 +150,11 @@ SATELLITE_POLYGONS = [
     {
         "name": "Kashmere Gate Flood Zone",
         "polygon": [
-            [77.220, 28.660], [77.235, 28.660],
-            [77.235, 28.672], [77.220, 28.672], [77.220, 28.660],
+            [77.220, 28.660],
+            [77.235, 28.660],
+            [77.235, 28.672],
+            [77.220, 28.672],
+            [77.220, 28.660],
         ],
         "flood_depth_m": 1.5,
         "confidence": 0.91,
@@ -149,17 +165,87 @@ SATELLITE_POLYGONS = [
 
 # ── IoT sensor configs ────────────────────────────────────────────────────────
 
-IOT_SENSORS = [
-    {"id": "yamuna_gauge_001", "type": "water_level", "lat": 28.6667, "lon": 77.2333, "unit": "metres", "base_val": 4.2},
-    {"id": "yamuna_gauge_002", "type": "water_level", "lat": 28.6741, "lon": 77.2896, "unit": "metres", "base_val": 3.8},
-    {"id": "yamuna_gauge_003", "type": "water_level", "lat": 28.6080, "lon": 77.2957, "unit": "metres", "base_val": 2.1},
-    {"id": "aq_sensor_cp_001", "type": "air_quality", "lat": 28.6315, "lon": 77.2167, "unit": "AQI", "base_val": 185},
-    {"id": "aq_sensor_okhla_001", "type": "air_quality", "lat": 28.5355, "lon": 77.2741, "unit": "AQI", "base_val": 312},
-    {"id": "yamuna_gauge_004", "type": "water_level", "lat": 28.5674, "lon": 77.2431, "unit": "metres", "base_val": 3.3},
-    {"id": "aq_sensor_shahdara_001", "type": "air_quality", "lat": 28.6741, "lon": 77.2896, "unit": "AQI", "base_val": 220},
-    {"id": "yamuna_gauge_005", "type": "water_level", "lat": 28.6562, "lon": 77.2410, "unit": "metres", "base_val": 5.1},
-    {"id": "aq_sensor_noida_001", "type": "air_quality", "lat": 28.5679, "lon": 77.3213, "unit": "AQI", "base_val": 145},
-    {"id": "yamuna_gauge_006", "type": "water_level", "lat": 28.6703, "lon": 77.2254, "unit": "metres", "base_val": 4.7},
+IOT_SENSORS: list[dict[str, Any]] = [
+    {
+        "id": "yamuna_gauge_001",
+        "type": "water_level",
+        "lat": 28.6667,
+        "lon": 77.2333,
+        "unit": "metres",
+        "base_val": 4.2,
+    },
+    {
+        "id": "yamuna_gauge_002",
+        "type": "water_level",
+        "lat": 28.6741,
+        "lon": 77.2896,
+        "unit": "metres",
+        "base_val": 3.8,
+    },
+    {
+        "id": "yamuna_gauge_003",
+        "type": "water_level",
+        "lat": 28.6080,
+        "lon": 77.2957,
+        "unit": "metres",
+        "base_val": 2.1,
+    },
+    {
+        "id": "aq_sensor_cp_001",
+        "type": "air_quality",
+        "lat": 28.6315,
+        "lon": 77.2167,
+        "unit": "AQI",
+        "base_val": 185,
+    },
+    {
+        "id": "aq_sensor_okhla_001",
+        "type": "air_quality",
+        "lat": 28.5355,
+        "lon": 77.2741,
+        "unit": "AQI",
+        "base_val": 312,
+    },
+    {
+        "id": "yamuna_gauge_004",
+        "type": "water_level",
+        "lat": 28.5674,
+        "lon": 77.2431,
+        "unit": "metres",
+        "base_val": 3.3,
+    },
+    {
+        "id": "aq_sensor_shahdara_001",
+        "type": "air_quality",
+        "lat": 28.6741,
+        "lon": 77.2896,
+        "unit": "AQI",
+        "base_val": 220,
+    },
+    {
+        "id": "yamuna_gauge_005",
+        "type": "water_level",
+        "lat": 28.6562,
+        "lon": 77.2410,
+        "unit": "metres",
+        "base_val": 5.1,
+    },
+    {
+        "id": "aq_sensor_noida_001",
+        "type": "air_quality",
+        "lat": 28.5679,
+        "lon": 77.3213,
+        "unit": "AQI",
+        "base_val": 145,
+    },
+    {
+        "id": "yamuna_gauge_006",
+        "type": "water_level",
+        "lat": 28.6703,
+        "lon": 77.2254,
+        "unit": "metres",
+        "base_val": 4.7,
+    },
 ]
 
 
@@ -170,8 +256,10 @@ def _write(path: Path, data: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-    count = len(data) if isinstance(data, list) else (
-        len(data.get("features", [])) if isinstance(data, dict) else 1
+    count = (
+        len(data)
+        if isinstance(data, list)
+        else (len(data.get("features", [])) if isinstance(data, dict) else 1)
     )
     print(f"  ✓ wrote {count} record(s) → {path.relative_to(BASE.parent)}")
 
@@ -190,7 +278,7 @@ def _ts(minutes_ago: float) -> str:
 
 def seed_citizen_reports() -> None:
     """Generate 25 realistic Hindi/English SMS-style citizen reports."""
-    records = []
+    records: list[dict[str, Any]] = []
     for i in range(25):
         loc = LOCATIONS[i % len(LOCATIONS)]
         # Alternate between English and Hindi reports
@@ -200,35 +288,39 @@ def seed_citizen_reports() -> None:
             template = random.choice(CITIZEN_TEMPLATES_EN)
 
         text = template.format(name=loc["name"])
-        records.append({
-            "id": f"sms_{i + 1:03d}",
-            "source": "sms" if i % 4 != 3 else "whatsapp",
-            "text": text,
-            "lat": _jitter(loc["lat"]),
-            "lon": _jitter(loc["lon"]),
-            "timestamp": _ts(i * 4.5),  # spread over ~2 hours
-            "media_urls": [],
-        })
+        records.append(
+            {
+                "id": f"sms_{i + 1:03d}",
+                "source": "sms" if i % 4 != 3 else "whatsapp",
+                "text": text,
+                "lat": _jitter(float(loc["lat"])),
+                "lon": _jitter(float(loc["lon"])),
+                "timestamp": _ts(i * 4.5),  # spread over ~2 hours
+                "media_urls": [],
+            }
+        )
 
     _write(BASE / "citizen_reports" / "mock_reports.json", records)
 
 
 def seed_social_posts() -> None:
     """Generate 20 realistic tweet-style social media posts."""
-    records = []
+    records: list[dict[str, Any]] = []
     for i in range(20):
         loc = LOCATIONS[i % len(LOCATIONS)]
         template = SOCIAL_TEMPLATES[i % len(SOCIAL_TEMPLATES)]
         text = template.format(name=loc["name"])
-        records.append({
-            "id": f"tweet_{i + 1:03d}",
-            "source": "tweet",
-            "text": text,
-            "url": f"https://twitter.com/DisasterMesh/status/{1900000000000 + i}",
-            "lat": _jitter(loc["lat"], 0.005) if i % 3 == 0 else None,
-            "lon": _jitter(loc["lon"], 0.005) if i % 3 == 0 else None,
-            "timestamp": _ts(i * 6),  # spread over ~2 hours
-        })
+        records.append(
+            {
+                "id": f"tweet_{i + 1:03d}",
+                "source": "tweet",
+                "text": text,
+                "url": f"https://twitter.com/DisasterMesh/status/{1900000000000 + i}",
+                "lat": _jitter(float(loc["lat"]), 0.005) if i % 3 == 0 else None,
+                "lon": _jitter(float(loc["lon"]), 0.005) if i % 3 == 0 else None,
+                "timestamp": _ts(i * 6),  # spread over ~2 hours
+            }
+        )
 
     _write(BASE / "social_posts" / "mock_tweets.json", records)
 
@@ -261,22 +353,25 @@ def seed_satellite_polygons() -> None:
 
 def seed_sensor_data() -> None:
     """Generate 10 IoT sensor readings (water level + air quality)."""
-    records = []
+    records: list[dict[str, Any]] = []
     for i, sensor in enumerate(IOT_SENSORS):
         # Add ±10% noise to base value
         noise = random.uniform(-0.1, 0.1)
-        value = round(sensor["base_val"] * (1 + noise), 2)
-        records.append({
-            "id": f"sensor_{i + 1:03d}",
-            "sensor_id": sensor["id"],
-            "sensor_type": sensor["type"],
-            "source": "iot_sensor",
-            "value": value,
-            "unit": sensor["unit"],
-            "lat": sensor["lat"],
-            "lon": sensor["lon"],
-            "timestamp": _ts(i * 10),
-        })
+        base_val = float(sensor["base_val"])
+        value = round(base_val * (1 + noise), 2)
+        records.append(
+            {
+                "id": f"sensor_{i + 1:03d}",
+                "sensor_id": sensor["id"],
+                "sensor_type": sensor["type"],
+                "source": "iot_sensor",
+                "value": value,
+                "unit": sensor["unit"],
+                "lat": sensor["lat"],
+                "lon": sensor["lon"],
+                "timestamp": _ts(i * 10),
+            }
+        )
 
     _write(BASE / "iot_sensors" / "sensor_readings.json", records)
 
@@ -377,4 +472,3 @@ if __name__ == "__main__":
     seed_responders()
     print("\n✅ Done. All demo_data/ files populated.")
     print("   Tip: POST these through /ingest/* to test the pipeline end-to-end.")
-

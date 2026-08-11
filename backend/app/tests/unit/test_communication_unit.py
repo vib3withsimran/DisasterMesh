@@ -33,7 +33,6 @@ from app.schemas import (
     VerifiedIncident,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -145,9 +144,7 @@ class TestStateMachine:
     def test_valid_transitions_dict_completeness(self):
         """Every IncidentStatus must have an entry in VALID_TRANSITIONS."""
         for status in IncidentStatus:
-            assert status in VALID_TRANSITIONS, (
-                f"Missing entry for {status} in VALID_TRANSITIONS"
-            )
+            assert status in VALID_TRANSITIONS, f"Missing entry for {status} in VALID_TRANSITIONS"
 
     def test_transition_mutates_in_place(self):
         """transition() must return the same object (mutated), not a copy."""
@@ -365,7 +362,7 @@ class TestSituationalSummary:
     @pytest.mark.asyncio
     async def test_summary_includes_assigned_responders(self):
         """When dispatch records exist, they should appear in the summary."""
-        from app.models import DispatchRecord as DispatchRecordORM, ResponderRecord
+        from app.models import ResponderRecord
 
         agent = CommunicationAgent()
         incident = _make_incident(IncidentStatus.EN_ROUTE)
@@ -389,9 +386,7 @@ class TestSituationalSummary:
         mock_resp_result = MagicMock()
         mock_resp_result.scalar_one_or_none.return_value = mock_rr
 
-        db.execute = AsyncMock(
-            side_effect=[mock_dispatch_result, mock_resp_result]
-        )
+        db.execute = AsyncMock(side_effect=[mock_dispatch_result, mock_resp_result])
 
         summary = await agent.generate_situational_summary(incident, db)
 

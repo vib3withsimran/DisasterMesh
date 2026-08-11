@@ -87,8 +87,14 @@ qdrant_storage/
 qdrant_data/
 .qdrant/
 
-# ── Demo / Seed Data ───────────────────────
-demo_data/
+# ── Demo / Seed Data (large files) ────────
+# Raw satellite/raster files (GeoJSON files ARE tracked; only binary rasters excluded)
+# per README: satellite data now lives in demo_data/satellite/
+demo_data/satellite/*.tif
+demo_data/satellite/*.nc
+demo_data/satellite/*.h5
+demo_data/satellite/*.hdf5
+demo_data/satellite/*.grib
 
 # SQLite dev database
 *.db

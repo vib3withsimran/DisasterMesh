@@ -1,0 +1,107 @@
+[
+  {
+    "id": "resp_001",
+    "name": "NDRF Battalion 8 (Medical/Rescue)",
+    "team_type": "rescue",
+    "capabilities": [
+      "medical",
+      "rescue",
+      "water"
+    ],
+    "team_size": 12,
+    "capacity": 3,
+    "lat": 28.667,
+    "lon": 77.233
+  },
+  {
+    "id": "resp_002",
+    "name": "Delhi Fire Services Unit 4",
+    "team_type": "rescue",
+    "capabilities": [
+      "rescue",
+      "water"
+    ],
+    "team_size": 8,
+    "capacity": 2,
+    "lat": 28.656,
+    "lon": 77.24
+  },
+  {
+    "id": "resp_003",
+    "name": "CATMA Medical Emergency Squad",
+    "team_type": "medical",
+    "capabilities": [
+      "medical"
+    ],
+    "team_size": 6,
+    "capacity": 2,
+    "lat": 28.631,
+    "lon": 77.216
+  },
+  {
+    "id": "resp_004",
+    "name": "Civil Defence Boat Task Force",
+    "team_type": "water",
+    "capabilities": [
+      "rescue",
+      "water",
+      "evacuation"
+    ],
+    "team_size": 10,
+    "capacity": 4,
+    "lat": 28.67,
+    "lon": 77.225
+  },
+  {
+    "id": "resp_005",
+    "name": "Red Cross Emergency Logistics",
+    "team_type": "logistics",
+    "capabilities": [
+      "logistics",
+      "evacuation"
+    ],
+    "team_size": 15,
+    "capacity": 5,
+    "lat": 28.608,
+    "lon": 77.295
+  },
+  {
+    "id": "resp_006",
+    "name": "Army Medical Corps Unit",
+    "team_type": "medical",
+    "capabilities": [
+      "medical",
+      "rescue"
+    ],
+    "team_size": 10,
+    "capacity": 3,
+    "lat": 28.567,
+    "lon": 77.243
+  },
+  {
+    "id": "resp_007",
+    "name": "SDRF Water Rescue Squad",
+    "team_type": "water",
+    "capabilities": [
+      "rescue",
+      "water"
+    ],
+    "team_size": 8,
+    "capacity": 2,
+    "lat": 28.674,
+    "lon": 77.289
+  },
+  {
+    "id": "resp_008",
+    "name": "Disaster Evacuation Transport Fleet",
+    "team_type": "evacuation",
+    "capabilities": [
+      "evacuation",
+      "logistics"
+    ],
+    "team_size": 20,
+    "capacity": 6,
+    "lat": 28.535,
+    "lon": 77.274
+  }
+]

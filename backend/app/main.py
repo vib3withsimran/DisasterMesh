@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
 
     # Phase 4.5: Background task to process intake queue retries every 30s
     from app.agents.intake_queue import get_intake_queue
+
     intake_queue = get_intake_queue()
 
     async def _queue_worker():
@@ -101,4 +102,3 @@ app.include_router(dispatch.router, prefix="/dispatch", tags=["Dispatch"])
 app.include_router(responders.router, prefix="/responders", tags=["Responders"])
 # Phase 6: Communication Agent — no prefix so WS /ws/updates is at root level
 app.include_router(communication.router, tags=["Communication"])
-
