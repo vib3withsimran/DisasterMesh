@@ -172,8 +172,8 @@ class VictimAgent:
         temporal_escalation = self._temporal_escalation(incident)
 
         # 3. Severity formula
-        raw = (base_needs_score + keyword_mult + pop_density + sat_area) / 4.0
-        severity_score = min(1.0, raw * corroboration_bonus * temporal_escalation)
+        raw = (base_needs_score + pop_density + sat_area) / 3.0
+        severity_score = min(1.0, raw * keyword_mult * corroboration_bonus * temporal_escalation)
 
         # 4. Priority label
         priority = self._score_to_priority(severity_score)

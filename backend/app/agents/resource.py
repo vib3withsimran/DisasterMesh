@@ -52,7 +52,7 @@ def _record_to_schema(rec: ResponderRecord) -> Responder:
     caps = [
         ResponderCapability(k)
         for k, v in (rec.capabilities or {}).items()
-        if v and k in ResponderCapability.__members__.values()  # type: ignore[attr-defined]
+        if v and k in {c.value for c in ResponderCapability}  # type: ignore[attr-defined]
     ]
     status = (
         ResponderStatus(rec.current_status) if rec.current_status else ResponderStatus.AVAILABLE
