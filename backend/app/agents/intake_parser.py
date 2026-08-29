@@ -63,11 +63,12 @@ class IntakeParsingError(RuntimeError):
 class IntakeParserAgent:
     """Parses free-text crisis reports into structured ParsedIntake using ChatGroq."""
 
+    _cached_llm: Any | None = None
+    _cached_key_model: tuple[str, str] | None = None
+
     def __init__(self, api_key: str | None = None, model_name: str | None = None) -> None:
         self.explicit_api_key = api_key
         self.explicit_model_name = model_name
-        self._cache_key: tuple[str, str] | None = None
-        self._structured_llm: Any | None = None
 
     def _get_api_key(self) -> str:
         if self.explicit_api_key is not None:
@@ -93,14 +94,15 @@ class IntakeParserAgent:
         """Return True if GROQ_API_KEY is configured."""
         return bool(self._get_api_key())
 
-    def _get_structured_llm(self, key: str, model_name: str) -> Any:
+    @classmethod
+    def _get_structured_llm(cls, key: str, model_name: str) -> Any:
         """
         Return a cached structured-output LLM client for (key, model_name),
-        building it once and reusing it across calls.
+        built once at the class level and reused across all instances and calls.
         """
         cache_key = (key, model_name)
-        if self._structured_llm is not None and self._cache_key == cache_key:
-            return self._structured_llm
+        if cls._cached_llm is not None and cls._cached_key_model == cache_key:
+            return cls._cached_llm
 
         llm = ChatGroq(
             api_key=SecretStr(key),
@@ -111,8 +113,8 @@ class IntakeParserAgent:
         )
         structured_llm = llm.with_structured_output(ParsedIntake)
 
-        self._cache_key = cache_key
-        self._structured_llm = structured_llm
+        cls._cached_key_model = cache_key
+        cls._cached_llm = structured_llm
         return structured_llm
 
     async def parse(self, raw_text: str) -> ParsedIntake:

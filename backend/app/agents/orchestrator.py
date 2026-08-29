@@ -256,8 +256,19 @@ async def run_solver(state: DispatchState) -> DispatchState:
         capable = [
             i for i, r in enumerate(available) if cap_name in {c.value for c in r.capabilities}
         ]
-        if capable:
-            solver.Add(solver.Sum([x[i] for i in capable]) >= 1)
+        if not capable:
+            # No responder has this required capability — infeasible
+            logger.warning(
+                "[run_solver] Required capability %r not available for %s — INFEASIBLE",
+                cap_name,
+                incident.cluster_id,
+            )
+            return {
+                "assigned_indices": [],
+                "solver_status": "INFEASIBLE",
+                "optimization_method": "NONE",
+            }
+        solver.Add(solver.Sum([x[i] for i in capable]) >= 1)
 
     # Solve
     status_code = solver.Solve()
@@ -359,7 +370,7 @@ async def commit_assignments(state: DispatchState) -> DispatchState:
         return {"result": result}
 
     dispatch_status = (
-        DispatchStatus.ASSIGNED if opt_method == "OPTIMAL" else DispatchStatus.HEURISTIC
+        DispatchStatus.ASSIGNED if opt_method == "OPTIMAL" else DispatchStatus.HEURISTIC_FALLBACK
     )
 
     assignments: list[Assignment] = []

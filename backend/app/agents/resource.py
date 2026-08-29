@@ -52,7 +52,7 @@ def _record_to_schema(rec: ResponderRecord) -> Responder:
     caps = [
         ResponderCapability(k)
         for k, v in (rec.capabilities or {}).items()
-        if v and k in ResponderCapability.__members__.values()  # type: ignore[attr-defined]
+        if v and k in {c.value for c in ResponderCapability}  # type: ignore[attr-defined]
     ]
     status = (
         ResponderStatus(rec.current_status) if rec.current_status else ResponderStatus.AVAILABLE
@@ -200,25 +200,20 @@ class ResourceAgent:
         radius_m: float = 50_000,
     ) -> list[Responder]:
         """
-        Return responders that are available and within *radius_m* metres of
-        the incident, sorted by distance (nearest first).
+        Return responders that are available within *radius_m* metres of the incident,
+        sorted by distance (nearest first).
 
         Availability rules:
-        - status == "available", OR
-        - status == "assigned" AND available_from <= now  (finishing soon)
+        - status == "available" only. Responders must explicitly transition to AVAILABLE
+          via ON_SCENE status update, not automatically based on ETA expiration.
 
         Parameters
         ----------
         incident:   incident whose location defines the search centre.
         radius_m:   geo-radius filter (default 50 km).
         """
-        now = datetime.now(UTC)
         stmt = select(ResponderRecord).where(
-            (ResponderRecord.current_status == ResponderStatus.AVAILABLE.value)
-            | (
-                (ResponderRecord.current_status == ResponderStatus.ASSIGNED.value)
-                & (ResponderRecord.available_from <= now)
-            )
+            ResponderRecord.current_status == ResponderStatus.AVAILABLE.value
         )
         result = await self.db.execute(stmt)
         all_available = result.scalars().all()

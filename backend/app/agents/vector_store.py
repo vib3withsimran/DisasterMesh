@@ -632,6 +632,10 @@ class VectorStore:
             "confidence": verified.confidence,
             "severity": str(verified.severity),
             "status": str(verified.status),
+            "text": verified.text or "",
+            "address": verified.address or "",
+            "needs": verified.needs.model_dump() if verified.needs else {},
+            "media_urls": verified.media_urls or [],
         }
 
         # Add geo point for server-side geo filtering

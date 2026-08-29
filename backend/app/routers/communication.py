@@ -216,7 +216,6 @@ async def transition_incident_status(
                 new_status=body.new_status,
                 db=db,
             )
-            await db.commit()
         except Exception as exc:  # noqa: BLE001
             logger.warning("Citizen SMS failed: %s", exc)
 

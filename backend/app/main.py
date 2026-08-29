@@ -11,6 +11,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.config import get_settings
 from app.db import get_qdrant_client_sync, init_db
@@ -79,6 +81,10 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# ── Rate Limiting ─────────────────────────────────────────────────────────────
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
 
 # ── CORS (Next.js frontend at localhost:3000) ─────────────────────────────────
 

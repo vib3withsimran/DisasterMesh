@@ -37,6 +37,28 @@ class IntakeQueue:
     def __init__(self, redis_url: str | None = None) -> None:
         self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379").strip()
         self._in_memory_queue: list[dict[str, Any]] = []
+        self._redis_client: Any = None
+
+    @property
+    async def _get_client(self):
+        """Get or create persistent Redis client."""
+        if self._redis_client is None:
+            try:
+                import redis.asyncio as aioredis
+                self._redis_client = aioredis.from_url(self.redis_url, socket_timeout=2.0)
+            except Exception as err:
+                logger.warning("Failed to create Redis client: %s", err)
+                return None
+        return self._redis_client
+
+    async def close(self):
+        """Close the Redis client."""
+        if self._redis_client is not None:
+            try:
+                await self._redis_client.aclose()
+            except Exception as err:
+                logger.warning("Error closing Redis client: %s", err)
+            self._redis_client = None
 
     async def enqueue(self, message_id: str, raw_payload: dict[str, Any], retries: int = 0) -> None:
         """Enqueue a report item for background LLM parsing retry."""
@@ -47,12 +69,12 @@ class IntakeQueue:
         }
 
         try:
-            import redis.asyncio as aioredis
-
-            client = aioredis.from_url(self.redis_url, socket_timeout=2.0)
-            await client.rpush(_QUEUE_KEY, json.dumps(item))
-            await client.aclose()
-            logger.info("Enqueued intake item %s to Redis queue (retries=%d)", message_id, retries)
+            client = await self._get_client
+            if client:
+                await client.rpush(_QUEUE_KEY, json.dumps(item))
+                logger.info("Enqueued intake item %s to Redis queue (retries=%d)", message_id, retries)
+            else:
+                raise Exception("Redis client unavailable")
         except Exception as err:
             logger.warning("Redis enqueue failed (%s), storing in in-memory queue fallback", err)
             self._in_memory_queue.append(item)
@@ -79,16 +101,14 @@ class IntakeQueue:
 
         # 1. Pop from Redis if available
         try:
-            import redis.asyncio as aioredis
-
-            client = aioredis.from_url(self.redis_url, socket_timeout=2.0)
-            while True:
-                raw_item = await client.lpop(_QUEUE_KEY)
-                if not raw_item:
-                    break
-                if isinstance(raw_item, (str, bytes)):
-                    items_to_process.append(json.loads(raw_item))
-            await client.aclose()
+            client = await self._get_client
+            if client:
+                while True:
+                    raw_item = await client.lpop(_QUEUE_KEY)
+                    if not raw_item:
+                        break
+                    if isinstance(raw_item, (str, bytes)):
+                        items_to_process.append(json.loads(raw_item))
         except Exception as err:
             logger.debug("Redis queue pop skipped/failed: %s", err)
 
