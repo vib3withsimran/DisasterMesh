@@ -1,6 +1,7 @@
 # ── Web framework ─────────────────────────────────────────────────────────────
 fastapi
 uvicorn[standard]
+slowapi  # Rate limiting
 
 # ── Data validation & settings ────────────────────────────────────────────────
 pydantic

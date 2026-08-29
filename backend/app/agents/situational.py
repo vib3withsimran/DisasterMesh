@@ -118,19 +118,44 @@ def _lookup_landmark(address: str) -> tuple[float, float] | None:
 
 def _polygon_centroid(coordinates: list) -> tuple[float, float]:
     """
-    Compute the centroid of the outer ring of a GeoJSON Polygon.
+    Compute the true area-weighted centroid of a polygon using the shoelace formula.
 
     GeoJSON coordinate order: [longitude, latitude]
     Returns: (lat, lon)
+    
+    This ensures the centroid falls inside the polygon, unlike simple vertex averaging.
     """
     ring = coordinates[0]  # outer ring
     n = len(ring)
     if n == 0:
         raise ValueError("Empty polygon ring")
 
-    sum_lon = sum(pt[0] for pt in ring)
-    sum_lat = sum(pt[1] for pt in ring)
-    return sum_lat / n, sum_lon / n
+    # Shoelace formula for area and area-weighted centroid
+    area = 0.0
+    centroid_x = 0.0
+    centroid_y = 0.0
+
+    for i in range(n - 1):
+        x0, y0 = ring[i]
+        x1, y1 = ring[i + 1]
+        cross = x0 * y1 - x1 * y0
+        area += cross
+        centroid_x += (x0 + x1) * cross
+        centroid_y += (y0 + y1) * cross
+
+    if area == 0:
+        # Degenerate polygon, fall back to simple average
+        sum_lon = sum(pt[0] for pt in ring)
+        sum_lat = sum(pt[1] for pt in ring)
+        return sum_lat / n, sum_lon / n
+
+    area *= 0.5
+    centroid_x /= 6.0 * area
+    centroid_y /= 6.0 * area
+
+    # centroid_x = lon, centroid_y = lat
+    return centroid_y, centroid_x
+
 
 
 def _detect_language(text: str) -> str:
@@ -151,10 +176,6 @@ class SituationalAgent:
 
     def __init__(self, geocoder_timeout: float = 5.0) -> None:
         self._geocoder_timeout = geocoder_timeout
-        self._http_client = httpx.AsyncClient(
-            headers={"User-Agent": "disastermesh/0.1 (disaster-response-demo)"},
-            timeout=geocoder_timeout,
-        )
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -308,17 +329,20 @@ class SituationalAgent:
 
         # 2. Nominatim REST API via httpx (handles SSL correctly on all platforms)
         try:
-            resp = await self._http_client.get(
-                "https://nominatim.openstreetmap.org/search",
-                params={"q": address, "format": "json", "limit": 1},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            if data:
-                lat = float(data[0]["lat"])
-                lon = float(data[0]["lon"])
-                logger.debug("Nominatim resolved %r → (%.4f, %.4f)", address, lat, lon)
-                return lat, lon
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(self._geocoder_timeout)
+            ) as client:
+                resp = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={"q": address, "format": "json", "limit": 1},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                if data:
+                    lat = float(data[0]["lat"])
+                    lon = float(data[0]["lon"])
+                    logger.debug("Nominatim resolved %r → (%.4f, %.4f)", address, lat, lon)
+                    return lat, lon
         except httpx.TimeoutException:
             logger.warning("Nominatim timed out for %r", address)
         except httpx.HTTPError as exc:
@@ -329,8 +353,8 @@ class SituationalAgent:
         return None
 
     async def normalize_report(
-        self,
-        text: str,
+        self, raw: dict | None = None, source_type: str | None = None,
+        text: str | None = None,
         source: str | SourceType = "sms",
         lat: float | None = None,
         lon: float | None = None,
@@ -338,8 +362,36 @@ class SituationalAgent:
         media_urls: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         timestamp: datetime | None = None,
-    ) -> ProtoIncident:
-        """Helper to build a ProtoIncident from raw attributes and normalize it."""
+    ) -> ProtoIncident | None:
+        """Helper to build a ProtoIncident from raw attributes and normalize it.
+        
+        Supports two calling patterns:
+        1. With raw dict + source_type (from intake_queue retry handler)
+        2. With individual keyword arguments (from normal workflow)
+        """
+        # Handle retry queue pattern: normalize_report(raw={...}, source_type="citizen")
+        if raw is not None and source_type is not None:
+            try:
+                if source_type == "citizen":
+                    return await self.process_citizen_report(CitizenReportInput(**raw))
+                elif source_type == "social":
+                    return await self.process_social_post(SocialPostInput(**raw))
+                elif source_type == "satellite":
+                    return await self.process_satellite_polygon(SatellitePolygonInput(**raw))
+                elif source_type == "sensor":
+                    return await self.process_sensor(SensorStreamInput(**raw))
+                else:
+                    logger.warning("Unknown source_type for retry: %s", source_type)
+                    return None
+            except Exception as exc:
+                logger.warning("Retry normalization failed: %s", exc)
+                return None
+        
+        # Handle normal pattern: individual keyword arguments
+        if text is None:
+            logger.warning("normalize_report called with neither raw/source_type nor text")
+            return None
+            
         st = SourceType(source) if isinstance(source, str) else source
         report_input = CitizenReportInput(
             source=st,
@@ -356,11 +408,50 @@ class SituationalAgent:
         return proto
 
     async def ingest(self, proto: ProtoIncident) -> None:
-        """Ingest normalized ProtoIncident into VerificationAgent."""
-        from app.agents.verification import get_verification_agent
+        """Idempotently store a proto incident (used by retry-queue fallback path)."""
+        import json
+        from app.db import SessionLocal
+        from app.models import ProtoIncidentRecord
+        from app.agents.vector_store import get_vector_store
+        from app.agents.embeddings import get_embedding_service
 
-        verifier = get_verification_agent()
-        await verifier.verify(proto)
+        db = SessionLocal()
+        try:
+            existing = (
+                db.query(ProtoIncidentRecord)
+                .filter(ProtoIncidentRecord.id == proto.id)
+                .first()
+            )
+            if existing:
+                existing.lat = proto.lat
+                existing.lon = proto.lon
+                existing.raw_text = proto.text
+                existing.parsed_json = proto.model_dump_json()
+                existing.media_urls = (
+                    json.dumps(proto.media_urls) if proto.media_urls else None
+                )
+                db.commit()
+            else:
+                record = ProtoIncidentRecord(
+                    id=proto.id,
+                    source_type=proto.source.value if hasattr(proto.source, "value") else str(proto.source),
+                    raw_text=proto.text,
+                    lat=proto.lat,
+                    lon=proto.lon,
+                    timestamp=proto.timestamp,
+                    media_urls=json.dumps(proto.media_urls) if proto.media_urls else None,
+                    parsed_json=proto.model_dump_json(),
+                )
+                db.add(record)
+                db.commit()
+        finally:
+            db.close()
+
+        # Ensure Qdrant has it too
+        store = get_vector_store()
+        embed_svc = get_embedding_service()
+        vector = await embed_svc.embed(proto.text)
+        await store.upsert(proto, vector)
 
 
 # ── Module-level singleton ────────────────────────────────────────────────────

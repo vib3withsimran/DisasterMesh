@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # ── App ───────────────────────────────────────────────────────────────────
     app_env: str = "development"
     log_level: str = "INFO"
+    api_key: str = ""  # API key for authentication (set via X-API-Key header)
 
     # ── Qdrant ────────────────────────────────────────────────────────────────
     qdrant_url: str = ""

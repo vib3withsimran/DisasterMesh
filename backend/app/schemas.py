@@ -11,7 +11,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ── Enums ─────────────────────────────────────────────────────────────────────
 
@@ -87,6 +87,20 @@ class CitizenReportInput(BaseModel):
     timestamp: datetime | None = None
     media_urls: list[str] = []
 
+    @field_validator("lat")
+    @classmethod
+    def validate_lat(cls, v: float | None) -> float | None:
+        if v is not None and (v < -90 or v > 90):
+            raise ValueError("Latitude must be between -90 and 90")
+        return v
+
+    @field_validator("lon")
+    @classmethod
+    def validate_lon(cls, v: float | None) -> float | None:
+        if v is not None and (v < -180 or v > 180):
+            raise ValueError("Longitude must be between -180 and 180")
+        return v
+
 
 class SocialPostInput(BaseModel):
     source: SourceType = SourceType.TWEET
@@ -95,6 +109,20 @@ class SocialPostInput(BaseModel):
     lat: float | None = None
     lon: float | None = None
     timestamp: datetime | None = None
+
+    @field_validator("lat")
+    @classmethod
+    def validate_lat(cls, v: float | None) -> float | None:
+        if v is not None and (v < -90 or v > 90):
+            raise ValueError("Latitude must be between -90 and 90")
+        return v
+
+    @field_validator("lon")
+    @classmethod
+    def validate_lon(cls, v: float | None) -> float | None:
+        if v is not None and (v < -180 or v > 180):
+            raise ValueError("Longitude must be between -180 and 180")
+        return v
 
 
 class SatellitePolygonInput(BaseModel):
@@ -113,6 +141,20 @@ class SensorStreamInput(BaseModel):
     lat: float
     lon: float
     timestamp: datetime | None = None
+
+    @field_validator("lat")
+    @classmethod
+    def validate_lat(cls, v: float) -> float:
+        if v < -90 or v > 90:
+            raise ValueError("Latitude must be between -90 and 90")
+        return v
+
+    @field_validator("lon")
+    @classmethod
+    def validate_lon(cls, v: float) -> float:
+        if v < -180 or v > 180:
+            raise ValueError("Longitude must be between -180 and 180")
+        return v
 
 
 # ── Needs & severity (output of Victim Agent) ─────────────────────────────────

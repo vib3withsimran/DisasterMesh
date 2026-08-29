@@ -153,13 +153,24 @@ async def dispatch_incident(
        - `run_solver` → OR-Tools SCIP optimization
        - `heuristic_assign` → greedy fallback if solver infeasible
        - `commit_assignments` → persist DispatchRecords + update responder statuses
-    3. Return `DispatchResult` with all assignments, ETAs, and solver metadata.
+    3. Notify responders via CommunicationAgent.
+    4. Return `DispatchResult` with all assignments, ETAs, and solver metadata.
     """
     vector_store = get_vector_store()
     incident = await _fetch_incident(cluster_id, vector_store)
 
     orchestrator = get_orchestrator_agent(db)
     result = await orchestrator.dispatch_incident(incident)
+
+    # Notify responders of their assignments
+    if result.assignments:
+        from app.agents.communication import get_communication_agent
+        comm_agent = get_communication_agent()
+        for assignment in result.assignments:
+            try:
+                await comm_agent.notify_responder_assignment(assignment, incident)
+            except Exception as err:
+                logger.warning("Failed to notify responder %s: %s", assignment.responder_id, err)
 
     logger.info(
         "Dispatch %s → status=%s, assigned=%d",
