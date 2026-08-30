@@ -46,10 +46,10 @@ API_BASE = "http://localhost:8000"
 WS_URL = "ws://localhost:8000/ws/updates"
 REFRESH_INTERVAL_S = 5.0  # seconds between auto-refresh
 
-# Delhi center for geo queries
-DEFAULT_LAT = 28.6139
-DEFAULT_LON = 77.2090
-DEFAULT_RADIUS_M = 50_000  # 50 km
+# Nepal center for geo queries (Kathmandu)
+DEFAULT_LAT = 27.7172
+DEFAULT_LON = 85.3240
+DEFAULT_RADIUS_M = 500_000  # 500 km (Nepal is large)
 
 # ── Priority colors ──────────────────────────────────────────────────────────
 

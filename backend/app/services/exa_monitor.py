@@ -318,15 +318,15 @@ async def feed_exa_to_pipeline(
                 lon = result.get("lon", 77.209)
                 source = result.get("source", "web")
 
-                # Map source to our source types
+                # Map source to valid SourceType enum values
                 source_type = {
-                    "twitter": "social",
-                    "reddit": "social",
-                    "youtube": "social",
-                    "instagram": "social",
-                    "facebook": "social",
+                    "twitter": "tweet",
+                    "reddit": "tweet",
+                    "youtube": "tweet",
+                    "instagram": "tweet",
+                    "facebook": "tweet",
                     "news": "news",
-                }.get(source, "social")
+                }.get(source, "tweet")
 
                 payload = {
                     "source": source_type,
@@ -397,7 +397,7 @@ if __name__ == "__main__":
                 async with httpx.AsyncClient(timeout=10) as client:
                     for r in results:
                         payload = {
-                            "source": "social",
+                            "source": "tweet" if r["source"] != "news" else "news",
                             "text": f"[{r['source'].upper()}] {r['text']}",
                             "lat": r["lat"],
                             "lon": r["lon"],

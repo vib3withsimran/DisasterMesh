@@ -163,7 +163,7 @@ async def feed_mock_tweets(
                 lon = loc.get("lon", 77.209)
 
                 payload = {
-                    "source": "social",
+                    "source": "tweet",
                     "text": text,
                     "lat": lat,
                     "lon": lon,
