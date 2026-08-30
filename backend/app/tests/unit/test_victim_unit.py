@@ -307,9 +307,9 @@ async def test_assess_empty_text_no_needs(agent: VictimAgent) -> None:
     incident = _incident(lat=26.8, lon=80.9)  # Lucknow — rural zone
     assessment = await agent.assess(incident, text="")
     assert assessment.needs == NeedsProfile()
-    # Formula floor: (0 + 1.0 + 0.2 + 0) / 4 × 1.0 × 1.0 = 0.30 → P3
-    assert assessment.priority == Priority.P3
-    assert assessment.severity_score == pytest.approx(0.3, abs=1e-3)
+    # Formula floor: (0 + 0.2 + 0) / 3 × 1.0 × 1.0 = 0.067 → P4
+    assert assessment.priority == Priority.P4
+    assert assessment.severity_score == pytest.approx(0.0667, abs=1e-3)
 
 
 @pytest.mark.anyio

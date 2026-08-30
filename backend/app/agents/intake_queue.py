@@ -45,6 +45,7 @@ class IntakeQueue:
         if self._redis_client is None:
             try:
                 import redis.asyncio as aioredis
+
                 self._redis_client = aioredis.from_url(self.redis_url, socket_timeout=2.0)
             except Exception as err:
                 logger.warning("Failed to create Redis client: %s", err)
@@ -72,7 +73,9 @@ class IntakeQueue:
             client = await self._get_client
             if client:
                 await client.rpush(_QUEUE_KEY, json.dumps(item))
-                logger.info("Enqueued intake item %s to Redis queue (retries=%d)", message_id, retries)
+                logger.info(
+                    "Enqueued intake item %s to Redis queue (retries=%d)", message_id, retries
+                )
             else:
                 raise Exception("Redis client unavailable")
         except Exception as err:

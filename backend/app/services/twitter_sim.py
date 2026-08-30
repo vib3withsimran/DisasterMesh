@@ -30,7 +30,12 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-MOCK_TWEETS_PATH = Path(__file__).resolve().parent.parent.parent.parent / "demo_data" / "social_posts" / "mock_tweets.json"
+MOCK_TWEETS_PATH = (
+    Path(__file__).resolve().parent.parent.parent.parent
+    / "demo_data"
+    / "social_posts"
+    / "mock_tweets.json"
+)
 
 # Nepal flood disaster tweets
 _DISASTER_TWEETS = [
@@ -52,11 +57,35 @@ _DISASTER_TWEETS = [
 ]
 
 _AREAS = [
-    "Kathmandu", "Pokhara", "Lalitpur", "Bhaktapur", " Biratnagar",
-    "Birgunj", "Butwal", "Dharan", "Hetauda", "Janakpur", "Nepalgunj",
-    "Terai", "Chitwan", "Morang", "Sunsari", "Rupandehi", "Kailali",
-    "Kanchanpur", "Jhapa", "Kaski", "Gorkha", "Nuwakot", "Sindhupalchok",
-    "Dolakha", "Rasuwa", "Makwanpur", "Bara", "Parsa", "Rautahat",
+    "Kathmandu",
+    "Pokhara",
+    "Lalitpur",
+    "Bhaktapur",
+    " Biratnagar",
+    "Birgunj",
+    "Butwal",
+    "Dharan",
+    "Hetauda",
+    "Janakpur",
+    "Nepalgunj",
+    "Terai",
+    "Chitwan",
+    "Morang",
+    "Sunsari",
+    "Rupandehi",
+    "Kailali",
+    "Kanchanpur",
+    "Jhapa",
+    "Kaski",
+    "Gorkha",
+    "Nuwakot",
+    "Sindhupalchok",
+    "Dolakha",
+    "Rasuwa",
+    "Makwanpur",
+    "Bara",
+    "Parsa",
+    "Rautahat",
 ]
 
 # Nepal bounding box
@@ -84,7 +113,7 @@ def _generate_random_tweet() -> dict[str, Any]:
 def load_mock_tweets() -> list[dict[str, Any]]:
     """Load mock tweets from the JSON file."""
     if MOCK_TWEETS_PATH.exists():
-        with open(MOCK_TWEETS_PATH, "r", encoding="utf-8") as f:
+        with open(MOCK_TWEETS_PATH, encoding="utf-8") as f:
             data = json.load(f)
             # Handle both formats: direct list or {tweets: [...]}
             if isinstance(data, list):
@@ -113,7 +142,9 @@ async def feed_mock_tweets(
     """
     tweets = load_mock_tweets()
     if not tweets:
-        logger.warning("No mock tweets found at %s — generating random Nepal flood tweets", MOCK_TWEETS_PATH)
+        logger.warning(
+            "No mock tweets found at %s — generating random Nepal flood tweets", MOCK_TWEETS_PATH
+        )
         tweets = [_generate_random_tweet() for _ in range(20)]
 
     logger.info("Starting mock tweet feed — %d tweets, interval=%.1fs", len(tweets), interval)
@@ -141,7 +172,9 @@ async def feed_mock_tweets(
                 try:
                     resp = await client.post(f"{api_url}/ingest/report", json=payload)
                     if resp.status_code == 200:
-                        logger.info("[TWEET %d] Fed: %s... → %s", sent + 1, text[:60], resp.status_code)
+                        logger.info(
+                            "[TWEET %d] Fed: %s... → %s", sent + 1, text[:60], resp.status_code
+                        )
                         sent += 1
                     else:
                         logger.warning("[TWEET] Failed (%d): %s", resp.status_code, resp.text[:100])
@@ -179,7 +212,13 @@ async def feed_random_tweets(
 
             try:
                 resp = await client.post(f"{api_url}/ingest/report", json=payload)
-                logger.info("[TWEET %d/%d] Fed: %s... → %s", i + 1, count, tweet["text"][:60], resp.status_code)
+                logger.info(
+                    "[TWEET %d/%d] Fed: %s... → %s",
+                    i + 1,
+                    count,
+                    tweet["text"][:60],
+                    resp.status_code,
+                )
             except httpx.ConnectError:
                 logger.error("Cannot connect to %s — is the backend running?", api_url)
                 break
@@ -196,15 +235,23 @@ async def feed_random_tweets(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Twitter simulation feed for DisasterMesh (Nepal floods)")
+    parser = argparse.ArgumentParser(
+        description="Twitter simulation feed for DisasterMesh (Nepal floods)"
+    )
     parser.add_argument("--api", default="http://localhost:8000", help="Backend API URL")
-    parser.add_argument("--mode", choices=["mock", "random"], default="mock",
-                        help="mock = use mock_tweets.json, random = generate fresh Nepal flood tweets")
+    parser.add_argument(
+        "--mode",
+        choices=["mock", "random"],
+        default="mock",
+        help="mock = use mock_tweets.json, random = generate fresh Nepal flood tweets",
+    )
     parser.add_argument("--interval", type=float, default=5.0, help="Seconds between tweets")
     parser.add_argument("--count", type=int, default=None, help="Number of tweets (None=infinite)")
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
 
     if args.mode == "mock":
         asyncio.run(feed_mock_tweets(args.api, args.interval, args.count))

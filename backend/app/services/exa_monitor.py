@@ -48,11 +48,35 @@ _NEPAL_LON_MIN, _NEPAL_LON_MAX = 80.05, 88.20
 
 # Nepal area names for location extraction
 _NEPAL_AREAS = [
-    "Kathmandu", "Pokhara", "Lalitpur", "Bhaktapur", " Biratnagar",
-    "Birgunj", "Butwal", "Dharan", "Hetauda", "Janakpur", "Nepalgunj",
-    "Terai", "Chitwan", "Morang", "Sunsari", "Rupandehi", "Kailali",
-    "Kanchanpur", "Jhapa", "Kaski", "Gorkha", "Nuwakot", "Sindhupalchok",
-    "Dolakha", "Rasuwa", "Makwanpur", "Bara", "Parsa", "Rautahat",
+    "Kathmandu",
+    "Pokhara",
+    "Lalitpur",
+    "Bhaktapur",
+    " Biratnagar",
+    "Birgunj",
+    "Butwal",
+    "Dharan",
+    "Hetauda",
+    "Janakpur",
+    "Nepalgunj",
+    "Terai",
+    "Chitwan",
+    "Morang",
+    "Sunsari",
+    "Rupandehi",
+    "Kailali",
+    "Kanchanpur",
+    "Jhapa",
+    "Kaski",
+    "Gorkha",
+    "Nuwakot",
+    "Sindhupalchok",
+    "Dolakha",
+    "Rasuwa",
+    "Makwanpur",
+    "Bara",
+    "Parsa",
+    "Rautahat",
 ]
 
 
@@ -219,11 +243,14 @@ class ExaMonitor:
         import random
 
         # Check for explicit coordinates
-        coord_match = re.search(r'(\d{1,3}\.\d{2,6})\s*[,/]\s*(\d{1,3}\.\d{2,6})', text)
+        coord_match = re.search(r"(\d{1,3}\.\d{2,6})\s*[,/]\s*(\d{1,3}\.\d{2,6})", text)
         if coord_match:
             try:
                 lat, lon = float(coord_match.group(1)), float(coord_match.group(2))
-                if _NEPAL_LAT_MIN <= lat <= _NEPAL_LAT_MAX and _NEPAL_LON_MIN <= lon <= _NEPAL_LON_MAX:
+                if (
+                    _NEPAL_LAT_MIN <= lat <= _NEPAL_LAT_MAX
+                    and _NEPAL_LON_MIN <= lon <= _NEPAL_LON_MAX
+                ):
                     return lat, lon
             except ValueError:
                 pass
@@ -270,6 +297,7 @@ async def feed_exa_to_pipeline(
         logger.error("EXA_API_KEY not set. Get one at https://exa.ai")
         logger.info("Falling back to mock tweets...")
         from app.services.twitter_sim import feed_mock_tweets
+
         await feed_mock_tweets(api_url, interval=5)
         return
 
@@ -312,7 +340,10 @@ async def feed_exa_to_pipeline(
                     if resp.status_code == 200:
                         logger.info(
                             "[EXA %d] Fed %s post: %s... → %s",
-                            sent + 1, source, text[:50], resp.status_code,
+                            sent + 1,
+                            source,
+                            text[:50],
+                            resp.status_code,
                         )
                         sent += 1
                     else:
@@ -345,7 +376,9 @@ if __name__ == "__main__":
     parser.add_argument("--num-results", type=int, default=5, help="Results per search")
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
 
     if args.query:
         # One-shot custom search
@@ -353,7 +386,7 @@ if __name__ == "__main__":
             monitor = ExaMonitor()
             results = await monitor.search(query=args.query, num_results=args.num_results)
             for i, r in enumerate(results):
-                print(f"\n--- Result {i+1} [{r['source']}] (score: {r['score']:.2f}) ---")
+                print(f"\n--- Result {i + 1} [{r['source']}] (score: {r['score']:.2f}) ---")
                 print(f"Title: {r['title']}")
                 print(f"URL: {r['url']}")
                 print(f"Text: {r['text'][:200]}...")

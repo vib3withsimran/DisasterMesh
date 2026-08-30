@@ -122,7 +122,7 @@ def _polygon_centroid(coordinates: list) -> tuple[float, float]:
 
     GeoJSON coordinate order: [longitude, latitude]
     Returns: (lat, lon)
-    
+
     This ensures the centroid falls inside the polygon, unlike simple vertex averaging.
     """
     ring = coordinates[0]  # outer ring
@@ -155,7 +155,6 @@ def _polygon_centroid(coordinates: list) -> tuple[float, float]:
 
     # centroid_x = lon, centroid_y = lat
     return centroid_y, centroid_x
-
 
 
 def _detect_language(text: str) -> str:
@@ -329,9 +328,7 @@ class SituationalAgent:
 
         # 2. Nominatim REST API via httpx (handles SSL correctly on all platforms)
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(self._geocoder_timeout)
-            ) as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(self._geocoder_timeout)) as client:
                 resp = await client.get(
                     "https://nominatim.openstreetmap.org/search",
                     params={"q": address, "format": "json", "limit": 1},
@@ -353,7 +350,9 @@ class SituationalAgent:
         return None
 
     async def normalize_report(
-        self, raw: dict | None = None, source_type: str | None = None,
+        self,
+        raw: dict | None = None,
+        source_type: str | None = None,
         text: str | None = None,
         source: str | SourceType = "sms",
         lat: float | None = None,
@@ -364,7 +363,7 @@ class SituationalAgent:
         timestamp: datetime | None = None,
     ) -> ProtoIncident | None:
         """Helper to build a ProtoIncident from raw attributes and normalize it.
-        
+
         Supports two calling patterns:
         1. With raw dict + source_type (from intake_queue retry handler)
         2. With individual keyword arguments (from normal workflow)
@@ -386,12 +385,12 @@ class SituationalAgent:
             except Exception as exc:
                 logger.warning("Retry normalization failed: %s", exc)
                 return None
-        
+
         # Handle normal pattern: individual keyword arguments
         if text is None:
             logger.warning("normalize_report called with neither raw/source_type nor text")
             return None
-            
+
         st = SourceType(source) if isinstance(source, str) else source
         report_input = CitizenReportInput(
             source=st,
@@ -410,31 +409,30 @@ class SituationalAgent:
     async def ingest(self, proto: ProtoIncident) -> None:
         """Idempotently store a proto incident (used by retry-queue fallback path)."""
         import json
+
+        from app.agents.embeddings import get_embedding_service
+        from app.agents.vector_store import get_vector_store
         from app.db import SessionLocal
         from app.models import ProtoIncidentRecord
-        from app.agents.vector_store import get_vector_store
-        from app.agents.embeddings import get_embedding_service
 
         db = SessionLocal()
         try:
             existing = (
-                db.query(ProtoIncidentRecord)
-                .filter(ProtoIncidentRecord.id == proto.id)
-                .first()
+                db.query(ProtoIncidentRecord).filter(ProtoIncidentRecord.id == proto.id).first()
             )
             if existing:
                 existing.lat = proto.lat
                 existing.lon = proto.lon
                 existing.raw_text = proto.text
                 existing.parsed_json = proto.model_dump_json()
-                existing.media_urls = (
-                    json.dumps(proto.media_urls) if proto.media_urls else None
-                )
+                existing.media_urls = json.dumps(proto.media_urls) if proto.media_urls else None
                 db.commit()
             else:
                 record = ProtoIncidentRecord(
                     id=proto.id,
-                    source_type=proto.source.value if hasattr(proto.source, "value") else str(proto.source),
+                    source_type=proto.source.value
+                    if hasattr(proto.source, "value")
+                    else str(proto.source),
                     raw_text=proto.text,
                     lat=proto.lat,
                     lon=proto.lon,

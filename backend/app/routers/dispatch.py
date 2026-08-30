@@ -165,6 +165,7 @@ async def dispatch_incident(
     # Notify responders of their assignments
     if result.assignments:
         from app.agents.communication import get_communication_agent
+
         comm_agent = get_communication_agent()
         for assignment in result.assignments:
             try:

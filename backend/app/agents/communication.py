@@ -395,7 +395,9 @@ class CommunicationAgent:
         vonage_from = os.getenv("VONAGE_FROM_NUMBER", "DisasterMesh").strip()
 
         if vonage_key and vonage_secret:
-            return await self._send_via_vonage(to_number, body, vonage_key, vonage_secret, vonage_from)
+            return await self._send_via_vonage(
+                to_number, body, vonage_key, vonage_secret, vonage_from
+            )
 
         # ── Twilio (fallback) ───────────────────────────────────────
         sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()

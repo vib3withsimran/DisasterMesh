@@ -27,16 +27,14 @@ import httpx
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.timer import Timer
 from textual.widgets import (
     DataTable,
     Footer,
     Header,
-    Label,
     RichLog,
-    Rule,
     Static,
 )
 
@@ -78,7 +76,9 @@ STATUS_ICONS = {
 class IncidentSummary(Static):
     """Summary bar showing total incident counts by severity."""
 
-    counts: reactive[dict[str, int]] = reactive(lambda: {"P1": 0, "P2": 0, "P3": 0, "P4": 0, "total": 0})
+    counts: reactive[dict[str, int]] = reactive(
+        lambda: {"P1": 0, "P2": 0, "P3": 0, "P4": 0, "total": 0}
+    )
 
     def render(self) -> str:
         c = self.counts
@@ -461,7 +461,9 @@ class DisasterMeshTUI(App):
     def action_dispatch(self) -> None:
         """Dispatch responders to the selected incident."""
         if not self.selected_cluster_id:
-            self._log_event("[yellow]⚠ No incident selected — press ↑/↓ to select one first[/yellow]")
+            self._log_event(
+                "[yellow]⚠ No incident selected — press ↑/↓ to select one first[/yellow]"
+            )
             return
 
         self._log_event(
