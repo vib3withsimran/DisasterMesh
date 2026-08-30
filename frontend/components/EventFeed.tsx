@@ -53,7 +53,7 @@ export default function EventFeed({ events, connected }: EventFeedProps) {
               <span className="flex-shrink-0">{icon}</span>
               <span className="text-gray-500 flex-shrink-0">{ts}</span>
               <span className="text-gray-300 truncate">
-                <span className="font-mono text-gray-400">{ev.cluster_id.slice(0, 16)}…</span>
+                <span className="font-mono text-gray-400">{(ev.cluster_id ?? "—").slice(0, 16)}…</span>
                 {ev.old_status && ev.new_status && (
                   <>
                     : {ev.old_status} →{" "}

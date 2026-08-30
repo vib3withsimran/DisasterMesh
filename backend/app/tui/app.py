@@ -389,9 +389,9 @@ class DisasterMeshTUI(App):
 
     # ── Auto-refresh ──────────────────────────────────────────────────────────
 
-    async def _auto_refresh(self) -> None:
+    def _auto_refresh(self) -> None:
         """Periodically refresh incident data."""
-        await self._load_incidents()
+        self.run_worker(self._load_incidents(), exclusive=True)
 
     # ── WebSocket listener ────────────────────────────────────────────────────
 
@@ -418,7 +418,7 @@ class DisasterMeshTUI(App):
                 self._log_event(f"[yellow]WS disconnected: {e} — retrying in 5s...[/yellow]")
                 await asyncio.sleep(5)
 
-    def _handle_ws_event(self, event: dict[str, Any]) -> None:
+    def _handle_ws_event(self, event: dict[str, Any]) -> None:  # noqa: async
         """Process a WebSocket event and update the UI."""
         event_type = event.get("event", "unknown")
         cluster_id = event.get("cluster_id", "—")
@@ -432,7 +432,7 @@ class DisasterMeshTUI(App):
                 f"{icon} [bold]{cluster_id}[/bold]: {old} → [bold green]{new}[/bold green]  ({ts})"
             )
             # Refresh data to pick up changes
-            self._load_incidents()
+            self.run_worker(self._load_incidents(), exclusive=True)
         else:
             self._log_event(f"[cyan]Event: {event_type}[/cyan] — {json.dumps(event)[:200]}")
 
@@ -456,7 +456,7 @@ class DisasterMeshTUI(App):
     def action_refresh(self) -> None:
         """Manually refresh incident data."""
         self._log_event("[bold]🔄 Refreshing...[/bold]")
-        self._load_incidents()
+        self.run_worker(self._load_incidents(), exclusive=True)
 
     def action_dispatch(self) -> None:
         """Dispatch responders to the selected incident."""
