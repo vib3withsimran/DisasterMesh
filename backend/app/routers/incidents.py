@@ -110,10 +110,49 @@ async def query_incidents(
     limit: int = Query(50, description="Max results"),
 ) -> dict:
     """
-    Return proto incidents within `radius` metres of (lat, lon).
+    Return verified incidents within `radius` metres of (lat, lon).
+
+    Filters to only verified incidents (point_type=\"verified\") and transforms
+    payloads to match the frontend Incident interface.
     """
     store = get_vector_store()
-    incidents = await store.search_nearby(lat=lat, lon=lon, radius_m=radius, limit=limit)
+    all_incidents = await store.search_nearby(lat=lat, lon=lon, radius_m=radius, limit=limit * 3)
+
+    # Filter to verified incidents only (they have cluster_id, confidence, severity)
+    verified = [i for i in all_incidents if i.get("point_type") == "verified"]
+
+    # Transform to frontend-compatible format
+    incidents = []
+    for inc in verified[:limit]:
+        ts_epoch = inc.get("timestamp_epoch")
+        ts = (
+            datetime.fromtimestamp(ts_epoch, tz=UTC).isoformat()
+            if ts_epoch
+            else datetime.now(UTC).isoformat()
+        )
+        needs_raw = inc.get("needs") or {}
+        incidents.append(
+            {
+                "cluster_id": inc.get("cluster_id", ""),
+                "source_provenance": inc.get("source_provenance", []),
+                "lat": inc.get("lat", 0.0),
+                "lon": inc.get("lon", 0.0),
+                "timestamp": ts,
+                "confidence": float(inc.get("confidence", 0.0)),
+                "severity": inc.get("severity", "P4"),
+                "needs": {
+                    "medical": needs_raw.get("medical", False),
+                    "shelter": needs_raw.get("shelter", False),
+                    "evacuation": needs_raw.get("evacuation", False),
+                    "rescue": needs_raw.get("rescue", False),
+                    "water": needs_raw.get("water", False),
+                    "food": needs_raw.get("food", False),
+                },
+                "media_urls": inc.get("media_urls", []),
+                "status": inc.get("status", "REPORTED"),
+            }
+        )
+
     return {
         "lat": lat,
         "lon": lon,

@@ -514,28 +514,34 @@ def run_demo(server: str, delay: float, verbose: bool, dry_run: bool) -> None:
             sev = inc.get("severity", "?")
             conf = inc.get("confidence", 0)
             _sub(f"  {sev}  confidence={conf:.0%}  cluster={cid[:20]}...")
-            cluster_ids.append(cid)
+            if cid and cid != "?":
+                cluster_ids.append(cid)
     else:
-        _warn("No incidents found yet -- pipeline may still be processing")
-        _info("Waiting 5s for agents to finish...")
-        time.sleep(5)
-        # Retry
-        status, data = _get(
-            server,
-            "/incidents/?lat=27.6800&lon=85.4200&radius=500000&limit=100",
-            verbose,
-            dry_run,
-            "nearby incidents (retry)",
-        )
-        incidents = data.get("incidents", []) if isinstance(data, dict) else []
-        n_incidents = len(incidents)
-        _ok(f"[P] Found {n_incidents} incident(s) on retry")
-        for inc in incidents[:5]:
-            cid = inc.get("cluster_id", "?")
-            sev = inc.get("severity", "?")
-            conf = inc.get("confidence", 0)
-            _sub(f"  {sev}  confidence={conf:.0%}  cluster={cid[:20]}...")
-            cluster_ids.append(cid)
+        _warn("No verified incidents yet -- waiting for verification agent...")
+        for attempt in range(3):
+            _info(f"Waiting 5s... (attempt {attempt + 1}/3)")
+            time.sleep(5)
+            status, data = _get(
+                server,
+                "/incidents/?lat=27.6800&lon=85.4200&radius=500000&limit=100",
+                verbose,
+                dry_run,
+                "nearby incidents (retry)",
+            )
+            incidents = data.get("incidents", []) if isinstance(data, dict) else []
+            n_incidents = len(incidents)
+            if incidents:
+                _ok(f"[P] Found {n_incidents} incident(s) on retry")
+                for inc in incidents[:5]:
+                    cid = inc.get("cluster_id", "?")
+                    sev = inc.get("severity", "?")
+                    conf = inc.get("confidence", 0)
+                    _sub(f"  {sev}  confidence={conf:.0%}  cluster={cid[:20]}...")
+                    if cid and cid != "?":
+                        cluster_ids.append(cid)
+                break
+        else:
+            _warn("Still no verified incidents after 3 retries")
 
     _pause(delay)
 
