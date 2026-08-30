@@ -16,15 +16,53 @@ from app.schemas import (
 router = APIRouter()
 
 
+def _transform_incident(raw: dict) -> dict:
+    """Transform a raw Qdrant payload into the frontend Incident interface.
+
+    Handles both proto incidents (raw ingestion) and verified incidents.
+    Proto incidents lack cluster_id/confidence/severity so we provide defaults.
+    """
+    ts_epoch = raw.get("timestamp_epoch")
+    ts = (
+        datetime.fromtimestamp(ts_epoch, tz=UTC).isoformat()
+        if ts_epoch
+        else datetime.now(UTC).isoformat()
+    )
+
+    needs_raw = raw.get("needs") or {}
+    source = raw.get("source", "")
+    provenance = raw.get("source_provenance", [])
+    if not provenance and source:
+        provenance = [source]
+
+    return {
+        "cluster_id": raw.get("cluster_id", raw.get("proto_id", raw.get("id", ""))),
+        "source_provenance": provenance,
+        "lat": raw.get("lat", 0.0),
+        "lon": raw.get("lon", 0.0),
+        "timestamp": ts,
+        "confidence": float(raw.get("confidence", 0.3)),
+        "severity": raw.get("severity", "P3"),
+        "needs": {
+            "medical": needs_raw.get("medical", False),
+            "shelter": needs_raw.get("shelter", False),
+            "evacuation": needs_raw.get("evacuation", False),
+            "rescue": needs_raw.get("rescue", False),
+            "water": needs_raw.get("water", False),
+            "food": needs_raw.get("food", False),
+        },
+        "media_urls": raw.get("media_urls", []),
+        "status": raw.get("status", "REPORTED"),
+    }
+
+
 @router.get("/search/semantic", summary="Semantic search for incidents")
 async def search_incidents_semantic(
     q: str = Query(..., description="Query text"),
     limit: int = Query(10, description="Max results"),
     min_score: float = Query(0.0, description="Minimum similarity score [0..1]"),
 ) -> dict:
-    """
-    Search incidents by semantic similarity using LangChain embeddings & Qdrant.
-    """
+    """Search incidents by semantic similarity using LangChain embeddings & Qdrant."""
     store = get_vector_store()
     results = await store.search_similar(query_text=q, limit=limit, min_score=min_score)
 
@@ -36,7 +74,7 @@ async def search_incidents_semantic(
         if hasattr(doc, "page_content") and "text" not in payload:
             payload["text"] = doc.page_content
         payload["similarity_score"] = float(score)
-        incidents.append(payload)
+        incidents.append(_transform_incident(payload))
 
     return {
         "query": q,
@@ -47,9 +85,7 @@ async def search_incidents_semantic(
 
 @router.post("/verify", response_model=VerifiedIncident, summary="Verify a proto incident")
 async def verify_proto_incident(proto: ProtoIncident) -> VerifiedIncident:
-    """
-    Run the VerificationAgent 3D clustering & deduplication pipeline on a ProtoIncident.
-    """
+    """Run the VerificationAgent 3D clustering & deduplication pipeline on a ProtoIncident."""
     agent = get_verification_agent()
     return await agent.verify(proto)
 
@@ -58,10 +94,8 @@ async def verify_proto_incident(proto: ProtoIncident) -> VerifiedIncident:
     "/{proto_id}/verify", response_model=VerifiedIncident, summary="Verify an ingested report by ID"
 )
 async def verify_incident_by_id(proto_id: str) -> VerifiedIncident:
-    """
-    Fetch a proto incident by ID from Qdrant vector store and run the
-    VerificationAgent 3D clustering & deduplication pipeline on it.
-    """
+    """Fetch a proto incident by ID from Qdrant vector store and run the
+    VerificationAgent 3D clustering & deduplication pipeline on it."""
     store = get_vector_store()
     payload = await store.get_by_proto_id(proto_id)
     if not payload:
@@ -92,14 +126,12 @@ async def verify_incident_by_id(proto_id: str) -> VerifiedIncident:
 
 @router.get("/{proto_id}", summary="Get incident by proto ID")
 async def get_incident(proto_id: str) -> dict:
-    """
-    Fetch a proto incident by ID from Qdrant vector store.
-    """
+    """Fetch a proto incident by ID from Qdrant vector store."""
     store = get_vector_store()
     incident = await store.get_by_proto_id(proto_id)
     if not incident:
         raise HTTPException(status_code=404, detail=f"Incident {proto_id} not found")
-    return incident
+    return _transform_incident(incident)
 
 
 @router.get("/", summary="Geo query for nearby incidents")
@@ -109,49 +141,33 @@ async def query_incidents(
     radius: float = Query(5000.0, description="Radius in metres"),
     limit: int = Query(50, description="Max results"),
 ) -> dict:
-    """
-    Return verified incidents within `radius` metres of (lat, lon).
+    """Return incidents within `radius` metres of (lat, lon).
 
-    Filters to only verified incidents (point_type=\"verified\") and transforms
-    payloads to match the frontend Incident interface.
+    Returns verified incidents first, then proto incidents as fallback.
+    All payloads are transformed to match the frontend Incident interface.
     """
     store = get_vector_store()
     all_incidents = await store.search_nearby(lat=lat, lon=lon, radius_m=radius, limit=limit * 3)
 
-    # Filter to verified incidents only (they have cluster_id, confidence, severity)
+    # Separate verified and proto incidents
     verified = [i for i in all_incidents if i.get("point_type") == "verified"]
+    protos = [i for i in all_incidents if i.get("point_type") != "verified"]
 
-    # Transform to frontend-compatible format
+    # Deduplicate protos by proto_id (keep latest)
+    seen_protos: dict[str, dict] = {}
+    for p in protos:
+        pid = p.get("proto_id", p.get("id", ""))
+        if pid:
+            seen_protos[pid] = p
+
+    # Transform: verified first, then protos
     incidents = []
     for inc in verified[:limit]:
-        ts_epoch = inc.get("timestamp_epoch")
-        ts = (
-            datetime.fromtimestamp(ts_epoch, tz=UTC).isoformat()
-            if ts_epoch
-            else datetime.now(UTC).isoformat()
-        )
-        needs_raw = inc.get("needs") or {}
-        incidents.append(
-            {
-                "cluster_id": inc.get("cluster_id", ""),
-                "source_provenance": inc.get("source_provenance", []),
-                "lat": inc.get("lat", 0.0),
-                "lon": inc.get("lon", 0.0),
-                "timestamp": ts,
-                "confidence": float(inc.get("confidence", 0.0)),
-                "severity": inc.get("severity", "P4"),
-                "needs": {
-                    "medical": needs_raw.get("medical", False),
-                    "shelter": needs_raw.get("shelter", False),
-                    "evacuation": needs_raw.get("evacuation", False),
-                    "rescue": needs_raw.get("rescue", False),
-                    "water": needs_raw.get("water", False),
-                    "food": needs_raw.get("food", False),
-                },
-                "media_urls": inc.get("media_urls", []),
-                "status": inc.get("status", "REPORTED"),
-            }
-        )
+        incidents.append(_transform_incident(inc))
+
+    remaining = limit - len(incidents)
+    for inc in list(seen_protos.values())[:remaining]:
+        incidents.append(_transform_incident(inc))
 
     return {
         "lat": lat,
@@ -168,20 +184,8 @@ async def query_incidents(
     summary="Assess severity & needs for a verified incident cluster",
 )
 async def assess_incident(cluster_id: str, body: AssessRequest) -> SeverityAssessment:
-    """
-    Run the VictimAgent needs-extraction and multi-factor severity scoring
-    pipeline on a verified incident cluster.
-
-    The request body mirrors a ``VerifiedIncident`` and adds an optional
-    ``text`` field containing the original report text used for bilingual
-    keyword extraction.
-
-    Returns a ``SeverityAssessment`` with:
-    - ``needs``          — structured boolean profile (medical, shelter, …)
-    - ``severity_score`` — 0.0–1.0 computed by the multi-factor model
-    - ``priority``       — P1 (critical) … P4 (low)
-    - ``factors``        — per-factor breakdown for transparency
-    """
+    """Run the VictimAgent needs-extraction and multi-factor severity scoring
+    pipeline on a verified incident cluster."""
     if body.cluster_id != cluster_id:
         raise HTTPException(
             status_code=422,
@@ -191,7 +195,6 @@ async def assess_incident(cluster_id: str, body: AssessRequest) -> SeverityAsses
             ),
         )
 
-    # Reconstruct a VerifiedIncident from the request body
     incident = VerifiedIncident(
         cluster_id=body.cluster_id,
         source_provenance=body.source_provenance,
