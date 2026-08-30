@@ -418,7 +418,7 @@ class DisasterMeshTUI(App):
                 self._log_event(f"[yellow]WS disconnected: {e} — retrying in 5s...[/yellow]")
                 await asyncio.sleep(5)
 
-    def _handle_ws_event(self, event: dict[str, Any]) -> None:  # noqa: async
+    def _handle_ws_event(self, event: dict[str, Any]) -> None:
         """Process a WebSocket event and update the UI."""
         event_type = event.get("event", "unknown")
         cluster_id = event.get("cluster_id", "—")
