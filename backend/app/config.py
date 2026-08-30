@@ -40,7 +40,12 @@ class Settings(BaseSettings):
     # ── Mapbox ────────────────────────────────────────────────────────────────
     mapbox_token: str = ""
 
-    # ── Twilio ────────────────────────────────────────────────────────────────
+    # ── Vonage SMS (recommended — free tier) ─────────────────────────────────
+    vonage_api_key: str = ""
+    vonage_api_secret: str = ""
+    vonage_from_number: str = "DisasterMesh"
+
+    # ── Twilio (alternative) ──────────────────────────────────────────────────
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
@@ -49,6 +54,9 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
     groq_timeout_s: int = 10
+
+    # ── Exa Social Media Monitor ───────────────────────────────────────────────
+    exa_api_key: str = ""
 
     # ── Data paths ────────────────────────────────────────────────────────────
     sentinel_data_dir: str = "./demo_data/satellite"

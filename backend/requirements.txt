@@ -32,6 +32,16 @@ redis
 # ── HTTP client ───────────────────────────────────────────────────────────────
 httpx
 
+# ── SMS (Vonage — free tier, no Twilio needed) ───────────────────────────────
+vonage
+
+# ── Social media monitoring (Exa — free tier: 1000 searches/month) ────────────
+exa-py
+
+# ── TUI dashboard ─────────────────────────────────────────────────────────────
+textual
+websockets
+
 # ── Environment variables ─────────────────────────────────────────────────────
 python-dotenv
 
@@ -45,3 +55,6 @@ pytest-asyncio
 # ── Dev tooling ───────────────────────────────────────────────────────────────
 ruff
 mypy
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+click

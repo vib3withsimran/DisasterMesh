@@ -16,6 +16,7 @@ DisasterMesh ingests reports from satellites, social media, citizens, and IoT se
 - [📦 Data schema](#data-schema)
 - [🔌 API reference](#api-reference)
 - [🔐 Environment variables](#environment-variables)
+- [⚡ Quick start](#quick-start)
 - [🌱 Seeding demo data](#seeding-demo-data)
 - [▶️ Running a demo scenario](#running-a-demo-scenario)
 - [✅ Testing](#testing)
@@ -117,17 +118,18 @@ Resource Agent   Orchestrator Agent
 | Layer | Choice |
 |---|---|
 | Backend | Python 3.11+, FastAPI (async) |
-| Agent orchestration | Function-call pipeline, optionally CrewAI or LangGraph |
+| Agent orchestration | LangGraph StateGraph + function-call pipeline |
 | Vector memory | Qdrant — local file mode via `qdrant-client` (`path=`), Qdrant Cloud for production |
 | Cache / task queue | Redis — [Upstash](https://upstash.com) free tier (local + production), or [Redis Cloud](https://redis.io/cloud) |
-| LLM | Any bilingual model (Claude, Gemini, etc.) for extraction/translation |
+| LLM | Groq (llama-3.3-70b) for smart intake parsing; fallback to keyword extraction |
 | Satellite data | Pre-downloaded Sentinel-2 GeoJSONs + NASA FIRMS REST for thermal alerts |
 | Geocoding | OpenStreetMap / Nominatim + local landmark lookup table for Hindi transliterations |
-| Optimization | Google OR-Tools (Python) |
-| Realtime | Server-sent events, or Socket.io as an alternative |
+| Optimization | Google OR-Tools SCIP (Python) |
+| Realtime | WebSocket (`/ws/updates`) for lifecycle event broadcasting |
 | Messaging | Twilio SMS (demo), WhatsApp Business API (optional) |
 | Image hosting | Cloudinary or S3 |
-| Frontend | Next.js 14+ (App Router) + Mapbox GL JS |
+| TUI Dashboard | [Textual](https://textual.textualize.io/) — terminal-based live incident monitor |
+| Web Frontend | Next.js 14+ (App Router) + Mapbox GL JS + SWR |
 
 ---
 
@@ -138,28 +140,63 @@ disastermesh/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py                # FastAPI entrypoint
-│   │   ├── agents/
-│   │   │   ├── situational.py
-│   │   │   ├── verification.py
-│   │   │   ├── victim.py
-│   │   │   ├── resource.py
-│   │   │   ├── orchestrator.py
-│   │   │   └── communication.py
+│   │   ├── config.py              # Pydantic settings (env vars)
+│   │   ├── db.py                  # Qdrant + SQLAlchemy + Redis clients
+│   │   ├── models.py              # ORM models (raw ingestion, audit, responders, dispatch, comms)
 │   │   ├── schemas.py             # Pydantic models — canonical incident schema
+│   │   ├── agents/
+│   │   │   ├── situational.py     # Agent 1: intake & fusion
+│   │   │   ├── verification.py    # Agent 2: dedup & confidence (3D clustering)
+│   │   │   ├── victim.py          # Agent 3: needs & severity scoring
+│   │   │   ├── resource.py        # Agent 4: responder state
+│   │   │   ├── orchestrator.py    # Agent 5: OR-Tools dispatch (LangGraph)
+│   │   │   ├── communication.py   # Agent 6: notifications & lifecycle
+│   │   │   ├── embeddings.py      # HuggingFace + LangChain embeddings
+│   │   │   ├── vector_store.py    # Qdrant vector store operations
+│   │   │   ├── intake_parser.py   # Groq LLM smart intake layer
+│   │   │   └── intake_queue.py    # Redis retry queue for failed parses
+│   │   ├── routers/               # FastAPI route handlers
+│   │   │   ├── health.py
+│   │   │   ├── ingest.py
+│   │   │   ├── incidents.py
+│   │   │   ├── dispatch.py
+│   │   │   ├── responders.py
+│   │   │   └── communication.py   # REST + WebSocket /ws/updates
+│   │   ├── tui/                   # Textual terminal dashboard
+│   │   │   ├── __init__.py
+│   │   │   ├── __main__.py        # python -m app.tui
+│   │   │   └── app.py             # TUI application
 │   │   └── tests/
-│   │       ├── unit/
-│   │       └── integration/
+│   │       ├── unit/              # 16 unit test files
+│   │       └── integration/       # 7 integration test files
 │   ├── scripts/
-│   │   └── seed_data.py
-│   └── requirements.txt
-├── demo_data/
-│   ├── citizen_reports/           # 20–30 mock SMS-style JSON messages (Hindi/English)
-│   ├── social_posts/              # 15–20 mock tweets/news items
-│   ├── satellite/                 # 3–5 Sentinel-2 flood GeoJSON polygons
-│   ├── responder_registry.json    # 5–8 responder teams with capabilities
-│   ├── population_density.geojson # Tagged POIs (school, hospital, metro)
-│   └── authority_alerts.json      # Mock IMD/authority alerts
-└── frontend/                      # Next.js 14+ app (App Router) + Mapbox GL JS
+│   │   ├── seed_data.py
+│   │   └── run_demo_scenario.py
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/                      # Next.js 14+ app (App Router)
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx               # Main dashboard (map + sidebar + events)
+│   │   └── globals.css
+│   ├── components/
+│   │   ├── MapView.tsx            # Mapbox GL JS map
+│   │   ├── IncidentSidebar.tsx    # Incident list + detail panel
+│   │   ├── IncidentCard.tsx       # Selected incident detail + dispatch
+│   │   ├── EventFeed.tsx          # Real-time WebSocket event stream
+│   │   └── StatusSummary.tsx      # Top bar with severity counts
+│   ├── hooks/
+│   │   ├── useIncidents.ts        # SWR polling hook
+│   │   └── useWebSocket.ts        # WebSocket connection hook
+│   ├── lib/
+│   │   └── api.ts                 # Typed API client
+│   ├── package.json
+│   └── .env.local.example
+└── demo_data/
+    ├── citizen_reports/           # 20–30 mock SMS-style JSON messages (Hindi/English)
+    ├── social_posts/              # 15–20 mock tweets/news items
+    ├── satellite/                 # 3–5 Sentinel-2 flood GeoJSON polygons
+    └── responder_registry.json    # 5–8 responder teams with capabilities
 ```
 
 ---
@@ -201,18 +238,30 @@ disastermesh/
 
 ## 🔌 API reference
 
-Suggested FastAPI endpoints. Adjust naming to match your actual implementation in `backend/app/main.py`.
-
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/ingest/report` | Accepts a citizen report JSON (SMS/text/form) |
-| `POST` | `/ingest/social` | Accepts a social post JSON |
-| `POST` | `/ingest/satellite` | Accepts a GeoJSON polygon or polygon ID |
-| `POST` | `/agents/run/{agent_name}` | Manually trigger a specific agent job (debug) |
-| `GET` | `/incidents/{cluster_id}` | Fetch incident cluster details |
-| `GET` | `/incidents?lat=&lon=&radius=` | Geo query for nearby incidents |
-| `POST` | `/dispatch/{cluster_id}` | Force a dispatch (debug endpoint) |
-| `WS` | `/ws/updates` | Real-time incident and dispatch updates |
+| `GET` | `/health` | Health check (environment, version) |
+| `POST` | `/ingest/report` | Accept a citizen report (SMS/text/form). Supports Groq LLM smart intake. |
+| `POST` | `/ingest/social` | Accept a social media post (tweet, news) |
+| `POST` | `/ingest/satellite` | Accept a GeoJSON polygon from Sentinel-2 |
+| `POST` | `/ingest/sensor` | Accept an IoT sensor reading |
+| `GET` | `/incidents/?lat=&lon=&radius=&limit=` | Geo query for nearby proto-incidents |
+| `GET` | `/incidents/{proto_id}` | Fetch a single proto-incident by ID |
+| `GET` | `/incidents/search/semantic?q=&limit=` | Semantic search across incidents |
+| `POST` | `/incidents/verify` | Run VerificationAgent on a ProtoIncident |
+| `POST` | `/incidents/{proto_id}/verify` | Verify an ingested report by ID |
+| `POST` | `/incidents/{cluster_id}/assess` | Run VictimAgent severity scoring |
+| `POST` | `/incidents/{cluster_id}/status` | Transition incident lifecycle state |
+| `GET` | `/incidents/{cluster_id}/summary` | Fetch situational summary |
+| `POST` | `/dispatch/{cluster_id}` | Dispatch responders via OR-Tools + LangGraph |
+| `POST` | `/dispatch/optimize` | Batch dispatch across multiple incidents |
+| `GET` | `/responders` | List responders (filter by status) |
+| `POST` | `/responders` | Register a new responder team |
+| `GET` | `/responders/{id}` | Get a single responder |
+| `PUT` | `/responders/{id}/location` | Update responder GPS location |
+| `PUT` | `/responders/{id}/status` | Update responder operational status |
+| `GET` | `/communications/logs` | Paginated communication audit log |
+| `WS` | `/ws/updates` | Real-time lifecycle transition events |
 
 **Example: submitting a citizen report**
 
@@ -289,6 +338,47 @@ For a demo, `DATABASE_URL` can stay on SQLite. Switch to Postgres for anything b
 
 ---
 
+## ⚡ Quick start
+
+### 1. Start the backend
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env        # edit if needed — defaults work for local demo
+uvicorn app.main:app --reload --port 8000
+```
+
+Open **http://localhost:8000/docs** to see the interactive API docs.
+
+### 2. Launch the TUI dashboard (terminal)
+
+In a second terminal:
+
+```bash
+cd backend
+python -m app.tui
+```
+
+Key bindings: `r` refresh · `d` dispatch · `s` summary · `q` quit · `↑↓` navigate.
+
+### 3. Launch the web frontend (browser)
+
+In a third terminal:
+
+```bash
+cd frontend
+npm install
+cp .env.local.example .env.local   # add your Mapbox token
+npm run dev
+```
+
+Open **http://localhost:3000**. The map centers on Delhi NCR. Get a free Mapbox token at [mapbox.com](https://account.mapbox.com/access-tokens/).
+
+---
+
 ## 🌱 Seeding demo data
 
 `backend/scripts/seed_data.py` should:
@@ -320,12 +410,17 @@ A good end-to-end demo flow:
 ## ✅ Testing
 
 ```bash
+# Backend tests
 cd backend
 pytest -q
+
+# Frontend typecheck
+cd frontend
+npx tsc --noEmit
 ```
 
-- **Unit tests:** `backend/app/tests/unit` — test each agent's logic in isolation with mocked inputs
-- **Integration tests:** `backend/app/tests/integration` — run against a small seeded Qdrant instance to validate the full pipeline
+- **Unit tests** (16 files): `backend/app/tests/unit/` — test each agent's logic in isolation with mocked inputs
+- **Integration tests** (7 files): `backend/app/tests/integration/` — run against a small seeded Qdrant instance to validate the full pipeline
 
 ---
 
@@ -333,8 +428,9 @@ pytest -q
 
 | Component | Local dev | Production |
 |---|---|---|
-| Frontend | `npm run dev` | Vercel |
 | Backend | `uvicorn` with `--reload` | Render / Fly.io |
+| TUI Dashboard | `python -m app.tui` (terminal) | — |
+| Web Frontend | `npm run dev` | Vercel |
 | Qdrant | Local file mode (`path=`) | Qdrant Cloud |
 | Redis | [Upstash](https://upstash.com) free tier | [Upstash](https://upstash.com) or [Redis Cloud](https://redis.io/cloud) |
 
@@ -352,6 +448,12 @@ Use environment variables to cleanly separate demo mode (mock data, no real SMS 
 
 ## 🗺️ Roadmap
 
+- [x] Textual TUI dashboard — terminal-based live incident monitoring
+- [x] Next.js + Mapbox GL JS web frontend
+- [x] WebSocket real-time event broadcasting (`/ws/updates`)
+- [x] LangGraph StateGraph for dispatch pipeline
+- [x] Groq LLM smart intake layer (bilingual)
+- [x] OR-Tools SCIP optimization with heuristic fallback
 - [ ] Real-time Sentinel-2 ingestion (beyond pre-downloaded polygons)
 - [ ] Multi-objective OR-Tools model (ETA + capability + capacity + fairness)
 - [ ] WhatsApp Business API integration for two-way citizen communication
