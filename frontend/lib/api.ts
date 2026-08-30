@@ -139,11 +139,11 @@ async function apiPost<T>(path: string, body?: unknown): Promise<T> {
 
 // ── API methods ────────────────────────────────────────────────────────────
 
-/** Fetch all incidents near a location (default: Delhi center, 50 km radius). */
+/** Fetch all incidents near a location (default: Kathmandu, Nepal — 500 km radius). */
 export async function fetchIncidents(
-  lat = 28.6139,
-  lon = 77.209,
-  radius = 50_000,
+  lat = 27.7172,
+  lon = 85.324,
+  radius = 500_000,
   limit = 100,
 ): Promise<{ incidents: Incident[]; count: number }> {
   return apiGet("/incidents/", { lat, lon, radius, limit });

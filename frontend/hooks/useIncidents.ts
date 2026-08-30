@@ -10,7 +10,7 @@ import { fetchIncidents, type Incident } from "@/lib/api";
 export function useIncidents(refreshInterval = 5_000) {
   const { data, error, isLoading, mutate } = useSWR(
     "incidents",
-    () => fetchIncidents(28.6139, 77.209, 50_000, 100),
+    () => fetchIncidents(27.7172, 85.324, 500_000, 100),
     {
       refreshInterval,
       revalidateOnFocus: true,

@@ -370,7 +370,7 @@ async def commit_assignments(state: DispatchState) -> DispatchState:
         return {"result": result}
 
     dispatch_status = (
-        DispatchStatus.ASSIGNED if opt_method == "OPTIMAL" else DispatchStatus.HEURISTIC_FALLBACK
+        DispatchStatus.ASSIGNED if opt_method == "OPTIMAL" else DispatchStatus.HEURISTIC
     )
 
     assignments: list[Assignment] = []

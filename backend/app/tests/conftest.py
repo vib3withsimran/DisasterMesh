@@ -78,10 +78,19 @@ def patch_get_db(db_session, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def patch_init_db(monkeypatch):
-    """Prevent lifespan from calling real init_db."""
+    """Prevent lifespan from calling real init_db and real Qdrant init."""
     import app.main as main_mod
 
     async def _noop(*args, **kwargs):
         pass
 
     monkeypatch.setattr(main_mod, "init_db", _noop)
+
+    # Also prevent lifespan from creating a file-based Qdrant client
+    # (which would conflict with the in-memory one from memory_vector_store)
+    from app.agents import vector_store as vs_mod
+
+    async def _noop_vs(*args, **kwargs):
+        pass
+
+    monkeypatch.setattr(vs_mod, "init_vector_store", _noop_vs)

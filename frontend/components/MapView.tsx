@@ -123,7 +123,7 @@ export default function MapView({
         <div style="padding:4px 8px;font-family:system-ui;font-size:13px;">
           <strong>${inc.severity}</strong> · ${inc.status}<br/>
           Confidence: ${(inc.confidence * 100).toFixed(0)}%<br/>
-          <span style="color:#888;font-size:11px;">${inc.cluster_id.slice(0, 20)}…</span>
+          <span style="color:#888;font-size:11px;">${(inc.cluster_id ?? "—").slice(0, 20)}…</span>
         </div>
       `);
 

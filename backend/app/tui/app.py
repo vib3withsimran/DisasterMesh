@@ -27,16 +27,14 @@ import httpx
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.timer import Timer
 from textual.widgets import (
     DataTable,
     Footer,
     Header,
-    Label,
     RichLog,
-    Rule,
     Static,
 )
 
@@ -48,10 +46,10 @@ API_BASE = "http://localhost:8000"
 WS_URL = "ws://localhost:8000/ws/updates"
 REFRESH_INTERVAL_S = 5.0  # seconds between auto-refresh
 
-# Delhi center for geo queries
-DEFAULT_LAT = 28.6139
-DEFAULT_LON = 77.2090
-DEFAULT_RADIUS_M = 50_000  # 50 km
+# Nepal center for geo queries (Kathmandu)
+DEFAULT_LAT = 27.7172
+DEFAULT_LON = 85.3240
+DEFAULT_RADIUS_M = 500_000  # 500 km (Nepal is large)
 
 # ── Priority colors ──────────────────────────────────────────────────────────
 
@@ -78,7 +76,9 @@ STATUS_ICONS = {
 class IncidentSummary(Static):
     """Summary bar showing total incident counts by severity."""
 
-    counts: reactive[dict[str, int]] = reactive(lambda: {"P1": 0, "P2": 0, "P3": 0, "P4": 0, "total": 0})
+    counts: reactive[dict[str, int]] = reactive(
+        lambda: {"P1": 0, "P2": 0, "P3": 0, "P4": 0, "total": 0}
+    )
 
     def render(self) -> str:
         c = self.counts
@@ -389,9 +389,9 @@ class DisasterMeshTUI(App):
 
     # ── Auto-refresh ──────────────────────────────────────────────────────────
 
-    async def _auto_refresh(self) -> None:
+    def _auto_refresh(self) -> None:
         """Periodically refresh incident data."""
-        await self._load_incidents()
+        self.run_worker(self._load_incidents(), exclusive=True)
 
     # ── WebSocket listener ────────────────────────────────────────────────────
 
@@ -432,7 +432,7 @@ class DisasterMeshTUI(App):
                 f"{icon} [bold]{cluster_id}[/bold]: {old} → [bold green]{new}[/bold green]  ({ts})"
             )
             # Refresh data to pick up changes
-            self._load_incidents()
+            self.run_worker(self._load_incidents(), exclusive=True)
         else:
             self._log_event(f"[cyan]Event: {event_type}[/cyan] — {json.dumps(event)[:200]}")
 
@@ -456,12 +456,14 @@ class DisasterMeshTUI(App):
     def action_refresh(self) -> None:
         """Manually refresh incident data."""
         self._log_event("[bold]🔄 Refreshing...[/bold]")
-        self._load_incidents()
+        self.run_worker(self._load_incidents(), exclusive=True)
 
     def action_dispatch(self) -> None:
         """Dispatch responders to the selected incident."""
         if not self.selected_cluster_id:
-            self._log_event("[yellow]⚠ No incident selected — press ↑/↓ to select one first[/yellow]")
+            self._log_event(
+                "[yellow]⚠ No incident selected — press ↑/↓ to select one first[/yellow]"
+            )
             return
 
         self._log_event(

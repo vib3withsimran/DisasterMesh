@@ -84,7 +84,7 @@ export default function IncidentSidebar({
                 </span>
               </div>
               <p className="text-[11px] text-gray-500 truncate mt-0.5 font-mono">
-                {inc.cluster_id.slice(0, 28)}
+                {inc.cluster_id?.slice(0, 28) ?? "—"}
               </p>
             </button>
           );

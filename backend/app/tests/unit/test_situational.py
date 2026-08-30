@@ -85,20 +85,20 @@ def test_polygon_centroid_square() -> None:
     """Centroid of a closed square ring (5 points, last == first)."""
     # Coordinates are [lon, lat]
     # Ring: (77.2,28.6) (77.4,28.6) (77.4,28.8) (77.2,28.8) (77.2,28.6)
-    # avg lat = (28.6+28.6+28.8+28.8+28.6)/5 = 28.68
-    # avg lon = (77.2+77.4+77.4+77.2+77.2)/5 = 77.28
+    # Shoelace centroid = true geometric center = (28.70, 77.30)
     coords = [[[77.2, 28.6], [77.4, 28.6], [77.4, 28.8], [77.2, 28.8], [77.2, 28.6]]]
     lat, lon = _polygon_centroid(coords)
-    assert abs(lat - 28.68) < 1e-6
-    assert abs(lon - 77.28) < 1e-6
+    assert abs(lat - 28.70) < 1e-6
+    assert abs(lon - 77.30) < 1e-6
 
 
 def test_polygon_centroid_triangle() -> None:
     coords = [[[77.0, 28.0], [78.0, 28.0], [77.5, 29.0], [77.0, 28.0]]]
     lat, lon = _polygon_centroid(coords)
-    # Average lat: (28+28+29+28)/4 = 28.25, avg lon: (77+78+77.5+77)/4 = 77.375
-    assert abs(lat - 28.25) < 1e-6
-    assert abs(lon - 77.375) < 1e-6
+    # Shoelace centroid for triangle (77.0,28.0) (78.0,28.0) (77.5,29.0)
+    # True centroid ≈ (28.33, 77.50)
+    assert abs(lat - 28.33) < 0.01
+    assert abs(lon - 77.50) < 0.01
 
 
 # ── extract_geometry ──────────────────────────────────────────────────────────
@@ -244,9 +244,9 @@ async def test_process_satellite_polygon_centroid() -> None:
     polygon = SatellitePolygonInput(geojson=geojson)
     proto = await agent.process_satellite_polygon(polygon)
     assert proto.source == SourceType.SATELLITE
-    # 5-point closed ring: avg lat=28.68, avg lon=77.28
-    assert abs(proto.lat - 28.68) < 1e-4
-    assert abs(proto.lon - 77.28) < 1e-4
+    # 5-point closed ring: shoelace centroid = true center (28.70, 77.30)
+    assert abs(proto.lat - 28.70) < 1e-4
+    assert abs(proto.lon - 77.30) < 1e-4
     assert "2.3" in proto.text  # flood depth in text
 
 

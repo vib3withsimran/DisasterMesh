@@ -219,13 +219,20 @@ class VectorStore:
                 ),
             )
             # Create geo index for location field
+            # Note: geo indexes have no effect in local/in-memory Qdrant,
+            # only in Qdrant server mode. Skip for local mode.
             try:
-                self._raw_client.create_payload_index(
-                    collection_name=COLLECTION_NAME,
-                    field_name="location",
-                    field_schema=PayloadSchemaType.GEO,
-                )
-                logger.info("Created geo index on 'location' field")
+                location = getattr(self._raw_client, "_client", None)
+                is_server_mode = location is None or not hasattr(location, "_flock_file")
+                if is_server_mode:
+                    self._raw_client.create_payload_index(
+                        collection_name=COLLECTION_NAME,
+                        field_name="location",
+                        field_schema=PayloadSchemaType.GEO,
+                    )
+                    logger.info("Created geo index on 'location' field")
+                else:
+                    logger.info("Skipping geo index (local/in-memory mode)")
             except Exception as e:
                 logger.warning("Failed to create geo index (may already exist): %s", e)
             logger.info(
@@ -634,8 +641,8 @@ class VectorStore:
             "confidence": verified.confidence,
             "severity": str(verified.severity),
             "status": str(verified.status),
-            "text": verified.text or "",
-            "address": verified.address or "",
+            "text": getattr(verified, "text", "") or "",
+            "address": getattr(verified, "address", "") or "",
             "needs": verified.needs.model_dump() if verified.needs else {},
             "media_urls": verified.media_urls or [],
         }

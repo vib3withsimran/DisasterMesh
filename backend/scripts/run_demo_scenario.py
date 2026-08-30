@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
 """
-DisasterMesh Live Demo Scenario Runner — Phase 7.
+DisasterMesh Live Demo Scenario -- Nepal Flood Response.
 
-Simulates a realistic multi-source flood crisis event flowing through the
-complete 6-agent pipeline.  Outputs richly coloured, timestamped console
-logs with a summary table at the end.
+Simulates a realistic multi-source flood crisis in Nepal flowing through the
+complete 6-agent pipeline. Designed for hackathon presentations with narration
+lines you can read aloud while the script runs.
 
 Usage
 -----
-    # Requires the FastAPI server to be running:
+    # 1. Start the backend first:
     cd backend && uvicorn app.main:app --reload --port 8000
 
-    python backend/scripts/run_demo_scenario.py [OPTIONS]
+    # 2. Run the demo:
+    python scripts/run_demo_scenario.py [OPTIONS]
 
 Options
 -------
-    --server URL    Base URL of the DisasterMesh API  (default: http://localhost:8000)
-    --verbose       Print full JSON request/response bodies
-    --dry-run       Print the scenario plan without making real HTTP calls
+    --server URL      Backend API URL (default: http://localhost:8000)
+    --delay SECONDS   Pause between phases (default: 2.0)
+    --verbose         Print full JSON request/response bodies
+    --dry-run         Print the scenario plan without HTTP calls
 
 Example
 -------
-    python backend/scripts/run_demo_scenario.py --verbose
+    python scripts/run_demo_scenario.py --delay 3 --verbose
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 # ---------------------------------------------------------------------------
-# ANSI colour helpers  (no external deps — works on macOS / Linux terminals)
+# ANSI colour helpers
 # ---------------------------------------------------------------------------
 
 RESET = "\033[0m"
@@ -52,40 +54,62 @@ def _c(text: str, *codes: str) -> str:
     return "".join(codes) + str(text) + RESET
 
 
+def _safe_print(text: str) -> None:
+    """Print safely on Windows terminals that can't handle Unicode."""
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        print(text.encode("utf-8", errors="replace").decode("utf-8", errors="replace"))
+
+
 def _ts() -> str:
     return datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
 
 def _banner(phase: int, title: str) -> None:
-    line = "─" * 68
-    print()
-    print(_c(f"┌{line}┐", BOLD, CYAN))
-    print(_c(f"│  [{_ts()}]  PHASE {phase}: {title:<57}│", BOLD, CYAN))
-    print(_c(f"└{line}┘", BOLD, CYAN))
+    line = "-" * 68
+    _safe_print("")
+    _safe_print(_c(f"+{line}+", BOLD, CYAN))
+    _safe_print(_c(f"|  [{_ts()}]  PHASE {phase}: {title:<57}|", BOLD, CYAN))
+    _safe_print(_c(f"+{line}+", BOLD, CYAN))
+
+
+def _narration(text: str) -> None:
+    """Print a narration line for the presenter to read aloud."""
+    _safe_print("")
+    _safe_print(_c(f'  >> "{text}"', BOLD, MAGENTA))
+    _safe_print("")
 
 
 def _ok(msg: str) -> None:
-    print(_c(f"  ✅  {msg}", GREEN))
+    _safe_print(_c(f"  [OK]  {msg}", GREEN))
 
 
 def _info(msg: str) -> None:
-    print(_c(f"  ℹ️   {msg}", WHITE))
+    _safe_print(_c(f"  [i]  {msg}", WHITE))
 
 
 def _warn(msg: str) -> None:
-    print(_c(f"  ⚠️   {msg}", YELLOW))
+    _safe_print(_c(f"  [!!]  {msg}", YELLOW))
 
 
 def _err(msg: str) -> None:
-    print(_c(f"  ❌  {msg}", RED))
+    _safe_print(_c(f"  [ERR] {msg}", RED))
 
 
 def _sub(msg: str) -> None:
-    print(_c(f"       {msg}", DIM))
+    _safe_print(_c(f"       {msg}", DIM))
+
+
+def _pause(delay: float) -> None:
+    """Human-readable pause between phases."""
+    if delay > 0:
+        _safe_print(_c(f"\n  ...  Waiting {delay:.0f}s before next phase...\n", DIM))
+        time.sleep(delay)
 
 
 # ---------------------------------------------------------------------------
-# HTTP helper
+# HTTP helpers
 # ---------------------------------------------------------------------------
 
 
@@ -97,9 +121,8 @@ def _post(
     dry_run: bool,
     label: str = "",
 ) -> tuple[int, dict]:
-    """POST body to server+path.  Returns (status_code, response_json)."""
     if dry_run:
-        _info(f"[DRY-RUN] POST {path}  ← {label}")
+        _info(f"[DRY-RUN] POST {path}  <- {label}")
         if verbose:
             _sub(json.dumps(body, indent=4, default=str))
         return 200, {"status": "dry_run", "message_id": "dry-run-id"}
@@ -107,7 +130,7 @@ def _post(
     try:
         import httpx
     except ImportError:
-        _err("httpx not installed — run:  pip install httpx")
+        _err("httpx not installed -- run:  pip install httpx")
         sys.exit(1)
 
     try:
@@ -119,10 +142,8 @@ def _post(
             pass
 
         if verbose:
-            _sub(f"→ Request:  POST {path}")
-            _sub(json.dumps(body, indent=4, default=str))
-            _sub(f"← Response: {resp.status_code}")
-            _sub(json.dumps(data, indent=4, default=str))
+            _sub(f"? POST {path}")
+            _sub(f"<- {resp.status_code}: {json.dumps(data, default=str)[:300]}")
 
         return resp.status_code, data
     except Exception as exc:
@@ -138,7 +159,7 @@ def _get(
     label: str = "",
 ) -> tuple[int, Any]:
     if dry_run:
-        _info(f"[DRY-RUN] GET  {path}  ← {label}")
+        _info(f"[DRY-RUN] GET  {path}  <- {label}")
         return 200, {}
 
     try:
@@ -155,8 +176,8 @@ def _get(
         except Exception:
             pass
         if verbose:
-            _sub(f"→ GET {path}")
-            _sub(f"← {resp.status_code}: " + json.dumps(data, indent=4, default=str)[:400])
+            _sub(f"? GET {path}")
+            _sub(f"<- {resp.status_code}: {json.dumps(data, default=str)[:300]}")
         return resp.status_code, data
     except Exception as exc:
         _err(f"HTTP error on GET {path}: {exc}")
@@ -170,27 +191,27 @@ def _get(
 
 class Timeline:
     def __init__(self) -> None:
-        self._rows: list[tuple[str, float, str, str]] = []  # (step, elapsed_ms, status, detail)
+        self._rows: list[tuple[str, float, str, str]] = []
         self._t_start = time.perf_counter()
 
     def record(self, step: str, elapsed_ms: float, ok: bool, detail: str = "") -> None:
-        status = _c("✅ PASS", GREEN) if ok else _c("❌ FAIL", RED)
+        status = _c("PASS", GREEN) if ok else _c("FAIL", RED)
         self._rows.append((step, elapsed_ms, status, detail))
 
     def print_summary(self) -> None:
         total_s = time.perf_counter() - self._t_start
-        print()
-        print(_c("═" * 80, BOLD, CYAN))
-        print(_c(f"  DEMO SCENARIO SUMMARY  —  total wall time: {total_s:.1f}s", BOLD, CYAN))
-        print(_c("═" * 80, BOLD, CYAN))
-        header = f"  {'Step':<40}  {'Elapsed':>10}  {'Status':<12}  Detail"
-        print(_c(header, BOLD))
-        print(_c("  " + "─" * 76, DIM))
+        _safe_print("")
+        _safe_print(_c("=" * 80, BOLD, CYAN))
+        _safe_print(_c(f"  DEMO SCENARIO SUMMARY  --  total wall time: {total_s:.1f}s", BOLD, CYAN))
+        _safe_print(_c("=" * 80, BOLD, CYAN))
+        header = f"  {'Step':<45}  {'Elapsed':>10}  {'Status':<12}  Detail"
+        _safe_print(_c(header, BOLD))
+        _safe_print(_c("  " + "-" * 76, DIM))
         for step, elapsed_ms, status, detail in self._rows:
-            row = f"  {step:<40}  {elapsed_ms:>8.1f}ms  {status}  {detail}"
-            print(row)
-        print(_c("═" * 80, BOLD, CYAN))
-        print()
+            row = f"  {step:<45}  {elapsed_ms:>8.1f}ms  {status}  {detail}"
+            _safe_print(row)
+        _safe_print(_c("=" * 80, BOLD, CYAN))
+        _safe_print("")
 
 
 # ---------------------------------------------------------------------------
@@ -198,12 +219,12 @@ class Timeline:
 # ---------------------------------------------------------------------------
 
 
-def run_demo(server: str, verbose: bool, dry_run: bool) -> None:
+def run_demo(server: str, delay: float, verbose: bool, dry_run: bool) -> None:
     tl = Timeline()
-    cluster_id: str | None = None
+    cluster_ids: list[str] = []  # noqa: F841
 
-    # ── Phase 0: Preflight ──────────────────────────────────────────────────
-    _banner(0, "Preflight — verify server is up")
+    # -- Phase 0: Preflight --------------------------------------------------
+    _banner(0, "Preflight -- Verify Backend Is Running")
     t0 = time.perf_counter()
     status, data = _get(server, "/health", verbose, dry_run, "health check")
     elapsed = (time.perf_counter() - t0) * 1000
@@ -211,107 +232,109 @@ def run_demo(server: str, verbose: bool, dry_run: bool) -> None:
     tl.record("Phase 0: Health check", elapsed, ok, data.get("environment", ""))
     if ok:
         _ok(
-            f"Server healthy — env={data.get('environment', 'unknown')}  version={data.get('version', '?')}"
+            f"Server healthy -- env={data.get('environment', '?')}  version={data.get('version', '?')}"
         )
     else:
         _err(f"Server not reachable at {server} (status={status}).  Is uvicorn running?")
         if not dry_run:
             sys.exit(1)
 
-    # ── Phase 1: Seed responders ────────────────────────────────────────────
-    _banner(1, "Seed Responder Registry — 5 diverse teams")
+    _pause(delay)
+
+    # ==========================================================================
+    # PHASE 1: Seed Nepal-area responder teams
+    # ==========================================================================
+    _banner(1, "Seed Responder Registry -- 5 Nepal disaster response teams")
+    _narration(
+        "Before the disaster strikes, we have 5 response teams stationed "
+        "across the Kathmandu Valley -- medical, rescue, logistics, and evacuation units."
+    )
+
     responder_teams = [
         {
-            "name": "Delhi Medical Response Unit Alpha",
+            "name": "Kathmandu Medical Response Alpha",
             "team_type": "medical",
             "capabilities": ["medical", "rescue"],
             "team_size": 8,
             "capacity": 3,
-            "lat": 28.6600,
-            "lon": 77.2200,
+            "lat": 27.7172,
+            "lon": 85.3240,
         },
         {
-            "name": "NDRF Flood Rescue Team Bravo",
+            "name": "NDRF Nepal Flood Rescue Bravo",
             "team_type": "rescue",
             "capabilities": ["rescue", "water"],
             "team_size": 12,
             "capacity": 4,
-            "lat": 28.6750,
-            "lon": 77.2500,
+            "lat": 27.6810,
+            "lon": 85.4300,
         },
         {
-            "name": "Civil Defence Logistics Charlie",
+            "name": "Bhaktapur Civil Defence Charlie",
             "team_type": "logistics",
             "capabilities": ["logistics", "evacuation"],
             "team_size": 6,
             "capacity": 2,
-            "lat": 28.6450,
-            "lon": 77.1900,
+            "lat": 27.6710,
+            "lon": 85.4298,
         },
         {
-            "name": "AIIMS Emergency Medical Delta",
+            "name": "Lalitpur Emergency Medical Delta",
             "team_type": "medical",
             "capabilities": ["medical"],
             "team_size": 5,
             "capacity": 2,
-            "lat": 28.5672,
-            "lon": 77.2100,
+            "lat": 27.6644,
+            "lon": 85.3188,
         },
         {
-            "name": "Delhi Fire Service Water Echo",
+            "name": "Pokhara Water Rescue Echo",
             "team_type": "rescue",
-            "capabilities": ["water", "rescue"],
+            "capabilities": ["water", "rescue", "evacuation"],
             "team_size": 10,
             "capacity": 3,
-            "lat": 28.6800,
-            "lon": 77.2600,
+            "lat": 28.2096,
+            "lon": 83.9856,
         },
     ]
-    resp_ids: list[str] = []
-    all_ok = True
+
     for team in responder_teams:
         t0 = time.perf_counter()
-        team_name = str(team["name"])
-        status, data = _post(server, "/responders", team, verbose, dry_run, team_name)
+        status, data = _post(server, "/responders", team, verbose, dry_run, team["name"])
         elapsed = (time.perf_counter() - t0) * 1000
         ok = status == 201 or dry_run
-        all_ok = all_ok and ok
         rid = data.get("id", "dry-run-id")
-        resp_ids.append(rid)
-        icon = "✅" if ok else "❌"
-        print(f"  {icon}  Registered: {_c(team_name, BOLD)}  id={rid[:8]}…  ({elapsed:.0f} ms)")
-    tl.record("Phase 1: Seed responders (×5)", elapsed, all_ok, f"{len(resp_ids)} IDs created")
+        icon = "[OK]" if ok else "[ERR]"
+        _safe_print(
+            f"  {icon}  Registered: {_c(team['name'], BOLD)}  id={rid[:8]}...  ({elapsed:.0f} ms)"
+        )
+        tl.record(f"Seed: {team['name'][:30]}", elapsed, ok)
 
-    # ── Phase 2: Citizen SMS flood reports ─────────────────────────────────
-    _banner(2, "Citizen SMS Reports — 5 overlapping Yamuna Bazar flood reports")
+    _pause(delay)
+
+    # ==========================================================================
+    # PHASE 2: Citizen SMS flood reports (Kathmandu valley)
+    # ==========================================================================
+    _banner(2, "Citizen SMS Reports -- Nepal flood emergency calls")
+    _narration(
+        "Citizens start calling emergency helplines and sending SMS reports. "
+        "Multiple people report the same flooding from slightly different locations. "
+        "Watch how our system deduplicates these into a single incident cluster."
+    )
+
     sms_reports = [
-        ("📱", "Water rising fast near Yamuna Bazar, need boats urgently", 28.6667, 77.2333),
+        ("?", "Water rising fast in Bagmati river, need boats urgently!", 27.6800, 85.4200),
+        ("?", "Kathmandu ma Bagmati nadi badhiyo, madad chahiye!", 27.6810, 85.4210),
+        ("?", "Flooding in Lalitpur, families trapped on rooftops, rescue ASAP", 27.6644, 85.3188),
         (
-            "📱",
-            "Yamuna ka paani bahut badh gaya hai, madad chahiye — Yamuna Bazar mein",
-            28.6670,
-            77.2336,
+            "?",
+            "Bhaktapur flooded, ancient temples at risk, people need medical help",
+            27.6710,
+            85.4298,
         ),
-        (
-            "📱",
-            "Flooding at Yamuna Bazar, families on rooftops, rescue needed ASAP",
-            28.6665,
-            77.2330,
-        ),
-        (
-            "📱",
-            "Heavy flood near Yamuna Bazaar, 3 people stuck, need medical help",
-            28.6672,
-            77.2339,
-        ),
-        (
-            "📱",
-            "Yamuna bazar mein paani bhar gaya, log phanse hain, naaav bhejna",
-            28.6664,
-            77.2332,
-        ),
+        ("?", "Terai region flood, water 4 feet deep, 20 families stranded", 27.6800, 85.4250),
     ]
-    msg_ids: list[str] = []
+
     for emoji, text, lat, lon in sms_reports:
         t0 = time.perf_counter()
         status, data = _post(
@@ -330,17 +353,73 @@ def run_demo(server: str, verbose: bool, dry_run: bool) -> None:
         )
         elapsed = (time.perf_counter() - t0) * 1000
         ok = status == 200 or dry_run
-        mid = data.get("message_id", "dry-run")
-        msg_ids.append(mid)
         resolved = f"lat={data.get('lat', lat):.4f} lon={data.get('lon', lon):.4f}"
-        print(
-            f"  {'✅' if ok else '❌'}  {emoji}  {_c(text[:62], BOLD)}  ({elapsed:.0f} ms)  {resolved}"
+        _safe_print(
+            f"  {'[OK]' if ok else '[ERR]'}  {emoji}  {_c(text[:60], BOLD)}  ({elapsed:.0f}ms)  {resolved}"
         )
-    tl.record("Phase 2: Citizen SMS × 5", elapsed, True, f"{len(msg_ids)} IDs created")
+        tl.record(f"SMS: {text[:30]}...", elapsed, ok)
 
-    # ── Phase 3: Satellite Sentinel-2 flood polygon ─────────────────────────
-    _banner(3, "Satellite Ingestion — Sentinel-2 Flood Polygon")
-    sentinel_polygon = {
+    _pause(delay)
+
+    # ==========================================================================
+    # PHASE 3: Social media posts (tweets)
+    # ==========================================================================
+    _banner(3, "Social Media Signals -- Twitter/X posts about Nepal floods")
+    _narration(
+        "Social media lights up. People are posting photos and reports from the ground. "
+        "Our system picks up these tweets and cross-references them with citizen SMS reports. "
+        "Notice how confidence scores increase when multiple sources corroborate."
+    )
+
+    tweets = [
+        {
+            "source": "tweet",
+            "text": "[!] BREAKING: Kathmandu valley flooded! Bagmati river overflowing, families on rooftops. Need immediate rescue #NepalFloods #Emergency",
+            "url": "https://twitter.com/NepalAlert/status/1001",
+            "lat": 27.7172,
+            "lon": 85.3240,
+        },
+        {
+            "source": "tweet",
+            "text": "Devastating floods in Lalitpur. Water levels rising. Local authorities overwhelmed. Please help! #NepalFlood #Rescue",
+            "url": "https://twitter.com/NepalNews/status/1002",
+            "lat": 27.6644,
+            "lon": 85.3188,
+        },
+        {
+            "source": "tweet",
+            "text": "Bhaktapur completely submerged. Ancient heritage sites under water. People need evacuation immediately #NepalFloods2026",
+            "url": "https://twitter.com/HeritageWatch/status/1003",
+            "lat": 27.6710,
+            "lon": 85.4298,
+        },
+    ]
+
+    for tweet in tweets:
+        tweet["timestamp"] = datetime.now(UTC).isoformat()
+        t0 = time.perf_counter()
+        status, data = _post(server, "/ingest/social", tweet, verbose, dry_run, "tweet")
+        elapsed = (time.perf_counter() - t0) * 1000
+        ok = status == 200 or dry_run
+        _safe_print(
+            f"  {'[OK]' if ok else '[ERR]'}  [TW]  {_c(tweet['text'][:55], BOLD)}  ({elapsed:.0f}ms)"
+        )
+        tl.record(f"Tweet: {tweet['text'][:30]}...", elapsed, ok)
+
+    _pause(delay)
+
+    # ==========================================================================
+    # PHASE 4: Satellite + IoT sensor data
+    # ==========================================================================
+    _banner(4, "Satellite & IoT Sensor Data -- Sentinel-2 + water level gauge")
+    _narration(
+        "Sentinel-2 satellite imagery confirms flooding via NDVI analysis. "
+        "Simultaneously, an IoT water level sensor in the Bagmati river triggers "
+        "an alert. Three independent sources now confirm the same incident."
+    )
+
+    # 4a: Satellite polygon
+    satellite = {
         "source": "satellite",
         "geojson": {
             "type": "Feature",
@@ -348,198 +427,213 @@ def run_demo(server: str, verbose: bool, dry_run: bool) -> None:
                 "type": "Polygon",
                 "coordinates": [
                     [
-                        [77.2280, 28.6630],
-                        [77.2420, 28.6630],
-                        [77.2420, 28.6730],
-                        [77.2280, 28.6730],
-                        [77.2280, 28.6630],
+                        [85.3100, 27.6600],
+                        [85.4400, 27.6600],
+                        [85.4400, 27.7200],
+                        [85.3100, 27.7200],
+                        [85.3100, 27.6600],
                     ]
                 ],
             },
             "properties": {
-                "flood_area_km2": 3.2,
-                "water_depth_m": 1.8,
-                "source": "Sentinel-2 Band B08/B03",
+                "flood_area_km2": 12.5,
+                "water_depth_m": 2.3,
+                "source": "Sentinel-2 Band B08/B03 NDVI",
                 "acquisition_date": datetime.now(UTC).isoformat(),
             },
         },
         "timestamp": datetime.now(UTC).isoformat(),
     }
     t0 = time.perf_counter()
-    status, data = _post(
-        server, "/ingest/satellite", sentinel_polygon, verbose, dry_run, "Sentinel-2 polygon"
-    )
+    status, data = _post(server, "/ingest/satellite", satellite, verbose, dry_run, "Sentinel-2")
     elapsed = (time.perf_counter() - t0) * 1000
     ok = status == 200 or dry_run
-    tl.record(
-        "Phase 3: Satellite (Sentinel-2)",
-        elapsed,
-        ok,
-        f"centroid={data.get('lat', '?')},{data.get('lon', '?')}",
-    )
+    tl.record("Satellite: Sentinel-2 polygon", elapsed, ok)
     if ok:
         _ok(
-            f"🛰️  Sentinel-2 polygon indexed — centroid lat={data.get('lat', '?')} lon={data.get('lon', '?')}  ({elapsed:.0f} ms)"
+            f"?  Satellite polygon indexed -- centroid {data.get('lat', '?')},{data.get('lon', '?')}  ({elapsed:.0f}ms)"
         )
     else:
         _warn(f"Satellite ingest returned {status}")
 
-    # ── Phase 4: IoT water level spike ──────────────────────────────────────
-    _banner(4, "IoT Sensor — Water Level Spike (Yamuna Bazar gauge WL-004)")
-    sensor_payload = {
+    _pause(1)
+
+    # 4b: IoT sensor
+    sensor = {
         "source": "iot_sensor",
-        "sensor_id": "WL-YAMUNA-004",
+        "sensor_id": "WL-BAGMATI-001",
         "sensor_type": "water_level",
-        "value": 4.2,
+        "value": 4.8,
         "unit": "metres",
-        "lat": 28.6658,
-        "lon": 77.2341,
+        "lat": 27.6800,
+        "lon": 85.4200,
         "timestamp": datetime.now(UTC).isoformat(),
     }
     t0 = time.perf_counter()
-    status, data = _post(server, "/ingest/sensor", sensor_payload, verbose, dry_run, "IoT sensor")
+    status, data = _post(server, "/ingest/sensor", sensor, verbose, dry_run, "IoT sensor")
     elapsed = (time.perf_counter() - t0) * 1000
     ok = status == 200 or dry_run
-    tl.record("Phase 4: IoT sensor (water_level=4.2m)", elapsed, ok, "above 3.0m alert threshold")
+    tl.record("IoT: Bagmati water gauge 4.8m", elapsed, ok)
     if ok:
-        _ok(f"🌊  IoT sensor alert indexed — value=4.2m (threshold=3.0m)  ({elapsed:.0f} ms)")
+        _ok(f"[W]  IoT sensor alert -- water level 4.8m (threshold 3.0m)  ({elapsed:.0f}ms)")
     else:
         _warn(f"IoT sensor ingest returned {status}")
 
-    # ── Phase 5: Social media tweet ─────────────────────────────────────────
-    _banner(5, "Social Signal — Tweet about Yamuna Bazar Flooding")
-    tweet_payload = {
-        "source": "tweet",
-        "text": "🚨 BREAKING: Yamuna Bazar completely submerged. Residents on rooftops. NDRF boats needed urgently. #YamunaFlood #Delhi",
-        "url": "https://twitter.com/example/status/12345678",
-        "lat": 28.6669,
-        "lon": 77.2337,
-        "timestamp": datetime.now(UTC).isoformat(),
-    }
-    t0 = time.perf_counter()
-    status, data = _post(server, "/ingest/social", tweet_payload, verbose, dry_run, "tweet")
-    elapsed = (time.perf_counter() - t0) * 1000
-    ok = status == 200 or dry_run
-    tl.record("Phase 5: Social tweet", elapsed, ok, "")
-    if ok:
-        _ok(f"🐦  Tweet indexed  ({elapsed:.0f} ms)")
-    else:
-        _warn(f"Social ingest returned {status}")
+    _pause(delay)
 
-    # ── Phase 6: Query incident cluster ────────────────────────────────────
-    _banner(6, "Verify Cluster — Query Nearby Incidents via REST")
+    # ==========================================================================
+    # PHASE 5: Query incidents & dispatch
+    # ==========================================================================
+    _banner(5, "Incident Query & Dispatch -- OR-Tools optimization")
+    _narration(
+        "Now let's see what the system has figured out. We query all nearby incidents "
+        "and then dispatch responders using our OR-Tools SCIP solver. "
+        "The optimizer minimizes total ETA while respecting capability constraints."
+    )
+
+    # Query incidents near Kathmandu
     t0 = time.perf_counter()
     status, data = _get(
         server,
-        "/incidents?lat=28.6667&lon=77.2333&radius=500",
+        "/incidents/?lat=27.6800&lon=85.4200&radius=500000&limit=100",
         verbose,
         dry_run,
-        "nearby incidents query",
+        "nearby incidents",
     )
     elapsed = (time.perf_counter() - t0) * 1000
     ok = status == 200 or dry_run
 
-    if isinstance(data, list) and data:
-        cluster_id = data[0].get("cluster_id")
-        n_incidents = len(data)
-        sources = list({item.get("source", "?") for item in data})
-        tl.record(
-            "Phase 6: Cluster query", elapsed, ok, f"{n_incidents} incidents, sources={sources}"
-        )
-        _ok(
-            f"📍  Found {n_incidents} nearby incident(s)  cluster_id={cluster_id}  sources={sources}  ({elapsed:.0f} ms)"
-        )
-    elif dry_run:
-        cluster_id = "cluster_dry-run-001"
-        tl.record("Phase 6: Cluster query", elapsed, True, "[dry-run]")
-        _info(f"[DRY-RUN] Would query for nearby incidents  ({elapsed:.0f} ms)")
-    else:
-        tl.record("Phase 6: Cluster query", elapsed, False, f"status={status}")
-        _warn(f"Incident query returned {status} — pipeline may not have formed a cluster yet")
+    incidents = data.get("incidents", []) if isinstance(data, dict) else []
+    n_incidents = len(incidents)
+    tl.record(f"Query: {n_incidents} incidents found", elapsed, ok)
 
-    # ── Phase 7: Dispatch via Orchestrator ──────────────────────────────────
-    _banner(7, "Dispatch — OR-Tools Optimization → Assign Responders")
-    if cluster_id and not dry_run:
-        t0 = time.perf_counter()
-        status, data = _post(server, f"/dispatch/{cluster_id}", {}, verbose, dry_run, "dispatch")
-        elapsed = (time.perf_counter() - t0) * 1000
-        ok = status == 200 or dry_run
-        assignments = data.get("assignments", [])
-        method = data.get("status", "?")
-        tl.record(
-            "Phase 7: OR-Tools dispatch",
-            elapsed,
-            ok,
-            f"{len(assignments)} responders, method={method}",
+    if incidents:
+        _ok(f"[P] Found {n_incidents} incident(s) in the Kathmandu Valley")
+        for inc in incidents[:5]:
+            cid = inc.get("cluster_id", "?")
+            sev = inc.get("severity", "?")
+            conf = inc.get("confidence", 0)
+            _sub(f"  {sev}  confidence={conf:.0%}  cluster={cid[:20]}...")
+            cluster_ids.append(cid)
+    else:
+        _warn("No incidents found yet -- pipeline may still be processing")
+        _info("Waiting 5s for agents to finish...")
+        time.sleep(5)
+        # Retry
+        status, data = _get(
+            server,
+            "/incidents/?lat=27.6800&lon=85.4200&radius=500000&limit=100",
+            verbose,
+            dry_run,
+            "nearby incidents (retry)",
         )
-        if ok:
-            _ok(
-                f"🚒  Dispatch complete — {len(assignments)} responder(s) assigned  method={method}  ({elapsed:.0f} ms)"
-            )
-            for a in assignments:
-                eta_min = int(a.get("eta_seconds", 0) / 60)
-                _sub(
-                    f"Responder {a['responder_id'][:8]}…  ETA={eta_min} min  cap_match={a.get('capability_match_score', 0):.2f}"
+        incidents = data.get("incidents", []) if isinstance(data, dict) else []
+        n_incidents = len(incidents)
+        _ok(f"[P] Found {n_incidents} incident(s) on retry")
+        for inc in incidents[:5]:
+            cid = inc.get("cluster_id", "?")
+            sev = inc.get("severity", "?")
+            conf = inc.get("confidence", 0)
+            _sub(f"  {sev}  confidence={conf:.0%}  cluster={cid[:20]}...")
+            cluster_ids.append(cid)
+
+    _pause(delay)
+
+    # Dispatch responders to each cluster
+    if cluster_ids:
+        _banner(5, "Dispatch -- Assigning responders to each cluster")
+        _narration(
+            "The OR-Tools solver assigns the best responders to each incident. "
+            "It considers: distance, team capabilities, and current availability."
+        )
+
+        for cid in cluster_ids[:3]:  # dispatch to top 3
+            t0 = time.perf_counter()
+            status, data = _post(server, f"/dispatch/{cid}", {}, verbose, dry_run, "dispatch")
+            elapsed = (time.perf_counter() - t0) * 1000
+            ok = status == 200 or dry_run
+            assignments = data.get("assignments", [])
+            method = data.get("solver_status", data.get("status", "?"))
+            tl.record(f"Dispatch {cid[:15]}...", elapsed, ok, f"{len(assignments)} responders")
+
+            if assignments:
+                _ok(
+                    f"[F]  {cid[:20]}... ? {len(assignments)} responder(s) assigned  solver={method}"
                 )
-        else:
-            _warn(f"Dispatch returned {status}")
+                for a in assignments:
+                    eta_min = int(a.get("eta_seconds", 0) / 60)
+                    _sub(
+                        f"  ? {a.get('responder_id', '?')[:12]}...  ETA={eta_min}min  "
+                        f"match={a.get('capability_match_score', 0):.0%}"
+                    )
+            else:
+                _warn(f"  No assignments for {cid[:20]}... status={method}")
+
+            _pause(1)
     else:
-        t0 = time.perf_counter()
-        status, data = _post(
-            server, "/dispatch/cluster_dry-run-001", {}, verbose, dry_run, "dispatch"
+        _warn("No clusters to dispatch -- skipping dispatch phase")
+
+    _pause(delay)
+
+    # ==========================================================================
+    # PHASE 6: Lifecycle state machine
+    # ==========================================================================
+    if cluster_ids:
+        _banner(6, "Lifecycle Tracking -- REPORTED ? RESOLVED")
+        _narration(
+            "As responders move through the operation, the system tracks every "
+            "state transition in real-time. Watch the frontend and TUI update live "
+            "as we advance through REPORTED, VERIFIED, ASSIGNED, EN_ROUTE, ON_SCENE, and RESOLVED."
         )
-        elapsed = (time.perf_counter() - t0) * 1000
-        tl.record("Phase 7: OR-Tools dispatch", elapsed, True, "[dry-run or no cluster]")
-        _info(f"[DRY-RUN] Would dispatch for cluster_id={cluster_id}  ({elapsed:.0f} ms)")
 
-    # ── Phase 8: Step through full lifecycle ─────────────────────────────────
-    _banner(8, "Lifecycle State Machine — REPORTED → VERIFIED → … → RESOLVED")
-    lifecycle_steps = [
-        ("VERIFIED", "Verification Agent confirmed cluster confidence ≥ 0.8"),
-        ("ASSIGNED", "Orchestrator committed responder assignments"),
-        ("EN_ROUTE", "Responders confirmed departure from staging area"),
-        ("ON_SCENE", "First responder arrived at Yamuna Bazar flood zone"),
-        ("RESOLVED", "Incident closed by on-scene commander after water receded"),
-    ]
+        lifecycle = [
+            ("VERIFIED", "Verification Agent confirmed cluster confidence ? 0.8"),
+            ("ASSIGNED", "Orchestrator committed responder assignments"),
+            ("EN_ROUTE", "Responders confirmed departure from staging area"),
+            ("ON_SCENE", "First responder arrived at flood zone"),
+            ("RESOLVED", "Incident closed -- water levels receded, area safe"),
+        ]
 
-    if cluster_id:
-        for new_status, reason in lifecycle_steps:
+        cid = cluster_ids[0]
+        for new_status, reason in lifecycle:
             t0 = time.perf_counter()
             status, data = _post(
                 server,
-                f"/incidents/{cluster_id}/status",
-                {"new_status": new_status, "reason": reason, "citizen_phone": "+919876543210"},
+                f"/incidents/{cid}/status",
+                {"new_status": new_status, "reason": reason},
                 verbose,
                 dry_run,
-                f"lifecycle → {new_status}",
+                f"lifecycle ? {new_status}",
             )
             elapsed = (time.perf_counter() - t0) * 1000
             ok = status == 200 or dry_run
             old = data.get("old_status", "?")
-            new = data.get("new_status", new_status)
-            tl.record(f"Phase 8: {old} → {new}", elapsed, ok, reason[:40])
-            icon_map = {
-                "VERIFIED": "🔍",
-                "ASSIGNED": "🚒",
-                "EN_ROUTE": "⏱️",
-                "ON_SCENE": "👨‍🚒",
-                "RESOLVED": "✨",
-            }
-            icon = icon_map.get(new_status, "➡️")
-            if ok:
-                _ok(f"{icon}  {old} → {_c(new, BOLD)}  ({elapsed:.0f} ms)")
-            else:
-                _warn(f"{new_status} transition returned {status}: {data}")
-            time.sleep(0.05)  # small human-readable pause between steps
-    else:
-        for new_status, reason in lifecycle_steps:
-            _info(f"[DRY-RUN] → {new_status}: {reason}")
-            tl.record(f"Phase 8: → {new_status}", 0, True, "[dry-run]")
+            tl.record(f"Lifecycle: {old} ? {new_status}", elapsed, ok)
 
-    # ── Summary ──────────────────────────────────────────────────────────────
+            icon_map = {
+                "VERIFIED": "[?]",
+                "ASSIGNED": "[F]",
+                "EN_ROUTE": "?",
+                "ON_SCENE": "??[F]",
+                "RESOLVED": "[OK]",
+            }
+            icon = icon_map.get(new_status, "?")
+            if ok:
+                _ok(f"{icon}  {old} ? {_c(new_status, BOLD)}  ({elapsed:.0f}ms)")
+            else:
+                _warn(f"  {new_status} transition failed: {status}")
+
+            _pause(0.5)
+
+    # -- Summary --------------------------------------------------------------
     tl.print_summary()
-    _ok("DisasterMesh Phase 7 demo scenario complete!")
-    print()
+    _narration(
+        "That's the full DisasterMesh pipeline! From citizen SMS reports to "
+        "satellite confirmation to automated dispatch -- all in real-time. "
+        "Thank you!"
+    )
+    _ok("DisasterMesh demo scenario complete!")
+    _safe_print("")
 
 
 # ---------------------------------------------------------------------------
@@ -549,27 +643,29 @@ def run_demo(server: str, verbose: bool, dry_run: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="DisasterMesh live demo scenario runner",
+        description="DisasterMesh Nepal Flood Demo Scenario",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("--server", default="http://localhost:8000", help="API base URL")
+    parser.add_argument("--delay", type=float, default=2.0, help="Seconds between phases")
     parser.add_argument("--verbose", action="store_true", help="Print full JSON bodies")
     parser.add_argument("--dry-run", action="store_true", help="Print plan without HTTP calls")
     args = parser.parse_args()
 
-    print()
-    print(_c("=" * 72, BOLD, MAGENTA))
-    print(_c("  🌐  DISASTERMESH — Live Demo Scenario Runner  (Phase 7)", BOLD, MAGENTA))
-    print(_c(f"  Server: {args.server}", MAGENTA))
-    print(
+    _safe_print("")
+    _safe_print(_c("=" * 72, BOLD, MAGENTA))
+    _safe_print(_c("  DISASTERMESH -- Nepal Flood Demo Scenario", BOLD, MAGENTA))
+    _safe_print(_c(f"  Server:   {args.server}", MAGENTA))
+    _safe_print(_c(f"  Delay:    {args.delay}s between phases", MAGENTA))
+    _safe_print(
         _c(
-            f"  Mode:   {'DRY-RUN' if args.dry_run else 'LIVE'}  |  Verbose: {args.verbose}",
+            f"  Mode:     {'DRY-RUN' if args.dry_run else 'LIVE'}  |  Verbose: {args.verbose}",
             MAGENTA,
         )
     )
-    print(_c("=" * 72, BOLD, MAGENTA))
+    _safe_print(_c("=" * 72, BOLD, MAGENTA))
 
-    run_demo(server=args.server, verbose=args.verbose, dry_run=args.dry_run)
+    run_demo(server=args.server, delay=args.delay, verbose=args.verbose, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
