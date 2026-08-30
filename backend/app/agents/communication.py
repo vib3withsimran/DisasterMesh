@@ -93,15 +93,13 @@ class CommunicationAgent:
     multiple concurrent FastAPI request handlers can share a single singleton
     instance without race conditions.
 
-    Twilio integration
-    ------------------
-    Checked lazily at send-time (not at construction).  When
-    ``TWILIO_ACCOUNT_SID`` and ``TWILIO_AUTH_TOKEN`` are both set the agent
-    sends real messages; otherwise it falls back to **mock mode** (log only).
-
-    WhatsApp support is enabled by additionally setting
-    ``TWILIO_WHATSAPP_FROM`` (the WhatsApp-enabled number, e.g.
-    ``whatsapp:+14155238886``).
+    SMS integration
+    ----------------
+    Checked lazily at send-time (not at construction).  Priority:
+    1. **Vonage** (free tier: 200 SMS/month) — set ``VONAGE_API_KEY`` +
+       ``VONAGE_API_SECRET``
+    2. **Twilio** (paid) — set ``TWILIO_ACCOUNT_SID`` + ``TWILIO_AUTH_TOKEN``
+    3. **Mock mode** (log only) — no credentials set
     """
 
     # ------------------------------------------------------------------
@@ -381,7 +379,9 @@ class CommunicationAgent:
         body: str,
     ) -> tuple[bool, str, str | None]:
         """
-        Send *body* to *to_number* via Twilio (real or WhatsApp) or mock mode.
+        Send *body* to *to_number* via Vonage, Twilio, or mock mode.
+
+        Priority: Vonage > Twilio > Mock (log only)
 
         Returns
         -------
@@ -389,27 +389,89 @@ class CommunicationAgent:
             ``(success, channel, error_message)``
             ``channel`` is ``"sms"``, ``"whatsapp"``, or ``"mock"``.
         """
+        # ── Vonage (preferred — free tier) ──────────────────────────
+        vonage_key = os.getenv("VONAGE_API_KEY", "").strip()
+        vonage_secret = os.getenv("VONAGE_API_SECRET", "").strip()
+        vonage_from = os.getenv("VONAGE_FROM_NUMBER", "DisasterMesh").strip()
+
+        if vonage_key and vonage_secret:
+            return await self._send_via_vonage(to_number, body, vonage_key, vonage_secret, vonage_from)
+
+        # ── Twilio (fallback) ───────────────────────────────────────
         sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
         token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
         from_sms = os.getenv("TWILIO_FROM_NUMBER", "").strip()
         from_wa = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
 
-        # ── Mock mode ────────────────────────────────────────────────
-        if not (sid and token and (from_sms or from_wa)):
-            logger.info(
-                "[SMS MOCK] To: %s | Body:\n%s",
-                to_number,
-                body,
-            )
-            return True, "mock", None
+        if sid and token and (from_sms or from_wa):
+            return await self._send_via_twilio(to_number, body, sid, token, from_sms, from_wa)
 
-        # ── Real Twilio ──────────────────────────────────────────────
+        # ── Mock mode (no credentials) ──────────────────────────────
+        logger.info(
+            "[SMS MOCK] To: %s | Body:\n%s",
+            to_number,
+            body,
+        )
+        return True, "mock", None
+
+    async def _send_via_vonage(
+        self,
+        to_number: str,
+        body: str,
+        api_key: str,
+        api_secret: str,
+        from_number: str,
+    ) -> tuple[bool, str, str | None]:
+        """Send SMS via Vonage Messages API (free tier: 200 SMS/month)."""
+        try:
+            from vonage import Auth, Vonage  # type: ignore[import]
+            from vonage_messages import Sms  # type: ignore[import]
+
+            client = Vonage(Auth(api_key=api_key, api_secret=api_secret))
+
+            # Clean phone number — Vonage wants digits only with country code
+            clean_to = to_number.lstrip("+").replace(" ", "")
+
+            response = client.messages.send(
+                Sms(
+                    to=clean_to,
+                    from_=from_number,
+                    text=body,
+                )
+            )
+
+            # Vonage returns a dict with 'message-id' on success
+            if response and response.get("status") == "0":
+                msg_id = response.get("message-id", "unknown")
+                logger.info("Vonage SMS sent to %s — ID: %s", to_number, msg_id)
+                return True, "sms", None
+            else:
+                error = response.get("error-text", "Unknown Vonage error")
+                logger.error("Vonage SMS failed to %s: %s", to_number, error)
+                return False, "sms", error
+
+        except ImportError:
+            logger.error("Vonage SDK not installed. Run: pip install vonage vonage-messages")
+            return False, "sms", "Vonage SDK not installed"
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Vonage send failed to %s: %s", to_number, exc)
+            return False, "sms", str(exc)
+
+    async def _send_via_twilio(
+        self,
+        to_number: str,
+        body: str,
+        sid: str,
+        token: str,
+        from_sms: str,
+        from_wa: str,
+    ) -> tuple[bool, str, str | None]:
+        """Send SMS/WhatsApp via Twilio REST API."""
         try:
             from twilio.rest import Client  # type: ignore[import]
 
             client = Client(sid, token)
 
-            # Prefer WhatsApp if configured and number looks like WA
             if from_wa and to_number.startswith("whatsapp:"):
                 msg = client.messages.create(
                     body=body,

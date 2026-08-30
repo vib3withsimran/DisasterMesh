@@ -152,6 +152,7 @@ out/
 # !uv.lock
 uv.lock
 poetry.lock
+package-lock.json
 
 # ── Misc ──────────────────────────────────
 *.bak

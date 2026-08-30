@@ -206,8 +206,10 @@ class VectorStore:
         try:
             self._raw_client.get_collection(COLLECTION_NAME)
             logger.info("Qdrant collection %r already exists", COLLECTION_NAME)
-        except UnexpectedResponse:
-            # Genuine "collection not found" — safe to create.
+        except (UnexpectedResponse, ValueError):
+            # UnexpectedResponse = HTTP API ("collection not found")
+            # ValueError = local file mode ("Collection X not found")
+            # Both mean: collection doesn't exist yet — safe to create.
             logger.info("Creating Qdrant collection %r …", COLLECTION_NAME)
             self._raw_client.create_collection(
                 collection_name=COLLECTION_NAME,
