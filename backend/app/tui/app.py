@@ -249,7 +249,7 @@ class DisasterMeshTUI(App):
         await self._load_incidents()
 
         # Start auto-refresh timer
-        self._refresh_timer = self.set_interval(REFRESH_INTERVAL_S, self._auto_refresh)
+        self._refresh_timer = self.set_interval(REFRESH_INTERVAL_S, self._on_refresh_tick)
 
         # Start WebSocket listener
         self._listen_ws()
@@ -382,7 +382,7 @@ class DisasterMeshTUI(App):
 
     # -- Auto-refresh ---------------------------------------------------------
 
-    def _auto_refresh(self) -> None:
+    def _on_refresh_tick(self) -> None:
         """Periodically refresh incident data."""
         self.run_worker(self._load_incidents(), exclusive=True)
 
@@ -401,10 +401,11 @@ class DisasterMeshTUI(App):
 
                     async for message in ws:
                         try:
-                            event = json.loads(message)
+                            msg_text = message.decode() if isinstance(message, bytes) else message
+                            event = json.loads(msg_text)
                             self._handle_ws_event(event)
-                        except json.JSONDecodeError:
-                            self._log_event(f"[yellow]WS raw: {message}[/yellow]")
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            self._log_event(f"[yellow]WS raw: {message!r}[/yellow]")
 
             except Exception as e:
                 self.ws_connected = False
@@ -434,11 +435,8 @@ class DisasterMeshTUI(App):
     @on(DataTable.RowSelected, "#incidents-table")
     def on_row_selected(self, event: DataTable.RowSelected) -> None:
         """When a row is selected, update the detail panel."""
-        if event.row_index is None:
-            return
-
         table = self.query_one("#incidents-table", DataTable)
-        row_data = table.get_row_at(event.row_index)
+        row_data = table.get_row_at(event.cursor_row)
         if row_data and len(row_data) >= 7:
             cluster_id = str(row_data[6])  # Last column is cluster_id
             self.selected_cluster_id = cluster_id

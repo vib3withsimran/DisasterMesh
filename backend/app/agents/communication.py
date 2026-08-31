@@ -155,10 +155,10 @@ class CommunicationAgent:
     async def notify_responder_assignment(
         self,
         assignment: Assignment,
-        responder_name: str,
-        responder_phone: str,
         incident: VerifiedIncident,
         db: AsyncSession,
+        responder_name: str = "",
+        responder_phone: str = "",
     ) -> bool:
         """
         Notify a responder that they have been assigned to *incident*.

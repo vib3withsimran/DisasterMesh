@@ -162,8 +162,9 @@ class IntakeQueue:
                     },
                     timestamp=raw_payload.get("timestamp"),
                 )
-                await situational_agent.ingest(proto)
-                processed_count += 1
+                if proto is not None:
+                    await situational_agent.ingest(proto)
+                    processed_count += 1
 
             except Exception as parse_err:
                 logger.warning(
@@ -187,6 +188,7 @@ class IntakeQueue:
                         media_urls=raw_payload.get("media_urls", []),
                         timestamp=raw_payload.get("timestamp"),
                     )
-                    await situational_agent.ingest(proto)
+                    if proto is not None:
+                        await situational_agent.ingest(proto)
 
         return processed_count
