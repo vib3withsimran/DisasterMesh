@@ -8,22 +8,22 @@ DisasterMesh ingests reports from satellites, social media, citizens, and IoT se
 
 ## 📑 Table of contents
 
-- [🧭 Project overview](#project-overview)
-- [🏗️ Architecture](#architecture)
-- [🔄 Data flow](#data-flow)
-- [🛠️ Tech stack](#tech-stack)
-- [📁 Repository layout](#repository-layout)
-- [📦 Data schema](#data-schema)
-- [🔌 API reference](#api-reference)
-- [🔐 Environment variables](#environment-variables)
-- [⚡ Quick start](#quick-start)
-- [🌱 Seeding demo data](#seeding-demo-data)
-- [▶️ Running a demo scenario](#running-a-demo-scenario)
-- [✅ Testing](#testing)
-- [🚀 Deployment](#deployment)
-- [🗺️ Roadmap](#roadmap)
-- [🤝 Contributing](#contributing)
-- [📄 License](#license)
+- [Project overview](#-project-overview)
+- [Architecture](#-architecture)
+- [Data flow](#-data-flow)
+- [Tech stack](#-tech-stack)
+- [Repository layout](#-repository-layout)
+- [Data schema](#-data-schema)
+- [API reference](#-api-reference)
+- [Environment variables](#-environment-variables)
+- [Quick start](#-quick-start)
+- [Seeding demo data](#-seeding-demo-data)
+- [Running a demo scenario](#-running-a-demo-scenario)
+- [Testing](#-testing)
+- [Deployment](#-deployment)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 

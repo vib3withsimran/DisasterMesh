@@ -362,7 +362,7 @@ class VectorStore:
                     )
                 )
 
-            scroll_filter = Filter(must=conditions) if conditions else None
+            scroll_filter = Filter(must=conditions) if conditions else None  # type: ignore[arg-type]  # list invariant but FieldCondition is valid
 
             # Paginated scroll to retrieve all matching points
             results: list[tuple[dict[str, Any], list[float]]] = []

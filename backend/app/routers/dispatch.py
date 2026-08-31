@@ -169,7 +169,7 @@ async def dispatch_incident(
         comm_agent = get_communication_agent()
         for assignment in result.assignments:
             try:
-                await comm_agent.notify_responder_assignment(assignment, incident)
+                await comm_agent.notify_responder_assignment(assignment, incident, db)
             except Exception as err:
                 logger.warning("Failed to notify responder %s: %s", assignment.responder_id, err)
 

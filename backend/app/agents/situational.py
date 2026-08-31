@@ -18,7 +18,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 import httpx
+from sqlalchemy import select
 
+from app.agents.embeddings import get_embedding_service
+from app.agents.vector_store import get_vector_store
+from app.db import get_db
+from app.models import RawIngestionRecord
 from app.schemas import (
     CitizenReportInput,
     ProtoIncident,
@@ -408,47 +413,43 @@ class SituationalAgent:
 
     async def ingest(self, proto: ProtoIncident) -> None:
         """Idempotently store a proto incident (used by retry-queue fallback path)."""
-        import json
-
-        from app.agents.embeddings import get_embedding_service
-        from app.agents.vector_store import get_vector_store
-        from app.db import SessionLocal
-        from app.models import ProtoIncidentRecord
-
-        db = SessionLocal()
-        try:
-            existing = (
-                db.query(ProtoIncidentRecord).filter(ProtoIncidentRecord.id == proto.id).first()
-            )
-            if existing:
-                existing.lat = proto.lat
-                existing.lon = proto.lon
-                existing.raw_text = proto.text
-                existing.parsed_json = proto.model_dump_json()
-                existing.media_urls = json.dumps(proto.media_urls) if proto.media_urls else None
-                db.commit()
-            else:
-                record = ProtoIncidentRecord(
-                    id=proto.id,
-                    source_type=proto.source.value
-                    if hasattr(proto.source, "value")
-                    else str(proto.source),
-                    raw_text=proto.text,
-                    lat=proto.lat,
-                    lon=proto.lon,
-                    timestamp=proto.timestamp,
-                    media_urls=json.dumps(proto.media_urls) if proto.media_urls else None,
-                    parsed_json=proto.model_dump_json(),
+        async for db in get_db():
+            try:
+                existing_result = await db.execute(
+                    select(RawIngestionRecord).where(RawIngestionRecord.id == proto.id)
                 )
-                db.add(record)
-                db.commit()
-        finally:
-            db.close()
+                existing = existing_result.scalar_one_or_none()
+                if existing:
+                    existing.lat = proto.lat
+                    existing.lon = proto.lon
+                    existing.text = proto.text
+                    existing.normalized_payload = proto.model_dump()
+                    existing.media_urls = proto.media_urls or []
+                else:
+                    record = RawIngestionRecord(
+                        id=proto.id,
+                        source_type=proto.source.value
+                        if hasattr(proto.source, "value")
+                        else str(proto.source),
+                        raw_payload=proto.raw_payload or {},
+                        text=proto.text,
+                        lat=proto.lat,
+                        lon=proto.lon,
+                        address=proto.address,
+                        language=proto.metadata.get("language", "en"),
+                        media_urls=proto.media_urls or [],
+                        normalized_payload=proto.model_dump(),
+                    )
+                    db.add(record)
+                await db.commit()
+            except Exception:
+                await db.rollback()
+                raise
 
         # Ensure Qdrant has it too
         store = get_vector_store()
         embed_svc = get_embedding_service()
-        vector = await embed_svc.embed(proto.text)
+        vector = await embed_svc.embed_text(proto.text)
         await store.upsert(proto, vector)
 
 

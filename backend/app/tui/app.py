@@ -1,18 +1,18 @@
 """
-DisasterMesh TUI Dashboard — terminal-based live incident monitoring.
+DisasterMesh TUI Dashboard -- terminal-based live incident monitoring.
 
 Run the backend first:
     cd backend && uvicorn app.main:app --reload --port 8000
 
 Then launch the TUI:
-    python -m app.tui.app
+    python -m app.tui
 
 Key bindings:
     q / Ctrl+C   Quit
     r            Refresh incidents
     d            Dispatch responders to selected incident
     s            Show situational summary
-    ↑/↓          Navigate incident table
+    UP/DOWN      Navigate incident table
 """
 
 from __future__ import annotations
@@ -30,28 +30,22 @@ from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.timer import Timer
-from textual.widgets import (
-    DataTable,
-    Footer,
-    Header,
-    RichLog,
-    Static,
-)
+from textual.widgets import DataTable, Footer, Header, RichLog, Static
 
 logger = logging.getLogger(__name__)
 
-# ── Configuration ────────────────────────────────────────────────────────────
+# -- Configuration -----------------------------------------------------------
 
 API_BASE = "http://localhost:8000"
 WS_URL = "ws://localhost:8000/ws/updates"
-REFRESH_INTERVAL_S = 5.0  # seconds between auto-refresh
+REFRESH_INTERVAL_S = 5.0
 
 # Nepal center for geo queries (Kathmandu)
 DEFAULT_LAT = 27.7172
 DEFAULT_LON = 85.3240
-DEFAULT_RADIUS_M = 500_000  # 500 km (Nepal is large)
+DEFAULT_RADIUS_M = 500_000  # 500 km
 
-# ── Priority colors ──────────────────────────────────────────────────────────
+# -- Priority colors ---------------------------------------------------------
 
 PRIORITY_STYLES = {
     "P1": "bold white on red",
@@ -61,16 +55,16 @@ PRIORITY_STYLES = {
 }
 
 STATUS_ICONS = {
-    "REPORTED": "📩",
-    "VERIFIED": "🔍",
-    "ASSIGNED": "🚒",
-    "EN_ROUTE": "⏱️",
-    "ON_SCENE": "👨‍🚒",
-    "RESOLVED": "✅",
+    "REPORTED": "[RP]",
+    "VERIFIED": "[VF]",
+    "ASSIGNED": "[AS]",
+    "EN_ROUTE": "[ER]",
+    "ON_SCENE": "[SC]",
+    "RESOLVED": "[RS]",
 }
 
 
-# ── Widgets ──────────────────────────────────────────────────────────────────
+# -- Widgets -----------------------------------------------------------------
 
 
 class IncidentSummary(Static):
@@ -83,7 +77,7 @@ class IncidentSummary(Static):
     def render(self) -> str:
         c = self.counts
         return (
-            f"  📊 Incidents:  "
+            f"  Incidents:  "
             f"[bold white on red] P1:{c['P1']} [/]  "
             f"[bold black on dark_orange] P2:{c['P2']} [/]  "
             f"[bold black on yellow] P3:{c['P3']} [/]  "
@@ -100,15 +94,19 @@ class IncidentDetail(Static):
     def render(self) -> str:
         d = self.detail_data
         if d is None:
-            return "  Select an incident from the table to view details.\n\n  Press [bold]d[/bold] to dispatch responders.\n  Press [bold]s[/bold] for situational summary."
+            return (
+                "  Select an incident from the table to view details.\n\n"
+                "  Press [bold]d[/bold] to dispatch responders.\n"
+                "  Press [bold]s[/bold] for situational summary."
+            )
 
-        cluster_id = d.get("cluster_id", "—")
+        cluster_id = d.get("cluster_id", "?")
         severity = d.get("severity", d.get("priority", "P4"))
         confidence = d.get("confidence", 0.0)
-        status = d.get("status", "—")
+        status = d.get("status", "?")
         lat = d.get("lat", 0.0)
         lon = d.get("lon", 0.0)
-        ts = d.get("timestamp", "—")
+        ts = d.get("timestamp", "?")
         sources = d.get("source_provenance", [])
         needs = d.get("needs", {})
 
@@ -116,27 +114,22 @@ class IncidentDetail(Static):
         needs_parts = []
         for need_name, need_val in needs.items():
             if need_val:
-                needs_parts.append(f"  ✅ {need_name}")
-            else:
-                needs_parts.append(f"  ❌ {need_name}")
-        needs_str = "\n".join(needs_parts) if needs_parts else "  No needs data"
+                needs_parts.append(f"  [+] {need_name}")
+        needs_str = "\n".join(needs_parts) if needs_parts else "  No needs identified"
 
         # Format sources
-        sources_str = ", ".join(sources) if sources else "—"
-
-        # Status icon
-        status_icon = STATUS_ICONS.get(status, "❓")
+        sources_str = ", ".join(sources) if sources else "?"
 
         lines = [
-            f"  🆔 {cluster_id}",
-            f"  {status_icon} Status: [bold]{status}[/bold]",
-            f"  🎯 Severity: [{PRIORITY_STYLES.get(severity, '')}]{severity}[/]",
-            f"  📈 Confidence: {confidence:.1%}",
-            f"  📍 Location: {lat:.4f}, {lon:.4f}",
-            f"  🕐 Time: {ts}",
-            f"  📡 Sources: {sources_str}",
+            f"  ID: {cluster_id}",
+            f"  Status: [bold]{status}[/bold]",
+            f"  Severity: [{PRIORITY_STYLES.get(severity, '')}]{severity}[/]",
+            f"  Confidence: {confidence:.1%}",
+            f"  Location: {lat:.4f}, {lon:.4f}",
+            f"  Time: {ts}",
+            f"  Sources: {sources_str}",
             "",
-            "  ── Needs ──",
+            "  -- Needs --",
             needs_str,
         ]
 
@@ -144,24 +137,24 @@ class IncidentDetail(Static):
         assignments = d.get("assignments", [])
         if assignments:
             lines.append("")
-            lines.append("  ── Assigned Responders ──")
+            lines.append("  -- Assigned Responders --")
             for a in assignments:
-                resp_id = a.get("responder_id", "—")
+                resp_id = a.get("responder_id", "?")
                 eta = a.get("eta_seconds", 0)
                 eta_min = int(eta / 60) if eta else 0
                 cap = a.get("capability_match_score", 0)
-                lines.append(f"  🚒 {resp_id[:12]}… ETA:{eta_min}m Match:{cap:.0%}")
+                lines.append(f"  >> {resp_id[:12]}... ETA:{eta_min}m Match:{cap:.0%}")
 
         return "\n".join(lines)
 
 
-# ── Main App ─────────────────────────────────────────────────────────────────
+# -- Main App ----------------------------------------------------------------
 
 
 class DisasterMeshTUI(App):
-    """DisasterMesh terminal dashboard — live incident monitoring."""
+    """DisasterMesh terminal dashboard -- live incident monitoring."""
 
-    TITLE = "DisasterMesh — Incident Dashboard"
+    TITLE = "DisasterMesh -- Incident Dashboard"
     SUB_TITLE = "Multi-Agent Disaster Response Coordination"
 
     CSS = """
@@ -256,13 +249,13 @@ class DisasterMeshTUI(App):
         await self._load_incidents()
 
         # Start auto-refresh timer
-        self._refresh_timer = self.set_interval(REFRESH_INTERVAL_S, self._auto_refresh)
+        self._refresh_timer = self.set_interval(REFRESH_INTERVAL_S, self._on_refresh_tick)
 
         # Start WebSocket listener
         self._listen_ws()
 
         # Log startup
-        self._log_event("[bold green]✓[/bold green] Dashboard connected to API")
+        self._log_event("[bold green]OK[/bold green] Dashboard connected to API")
 
     async def on_unmount(self) -> None:
         """Clean up resources."""
@@ -271,7 +264,7 @@ class DisasterMeshTUI(App):
         if self._http_client:
             await self._http_client.aclose()
 
-    # ── Data loading ──────────────────────────────────────────────────────────
+    # -- Data loading ---------------------------------------------------------
 
     async def _api_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         """Make a GET request to the backend API."""
@@ -285,7 +278,7 @@ class DisasterMeshTUI(App):
             self._log_event(f"[red]API error {e.response.status_code}: {path}[/red]")
             return None
         except httpx.ConnectError:
-            self._log_event("[red]Cannot connect to API — is the backend running?[/red]")
+            self._log_event("[red]Cannot connect to API -- is the backend running?[/red]")
             return None
         except Exception as e:
             self._log_event(f"[red]Request failed: {e}[/red]")
@@ -303,7 +296,7 @@ class DisasterMeshTUI(App):
             self._log_event(f"[red]API error {e.response.status_code}: {path}[/red]")
             return None
         except httpx.ConnectError:
-            self._log_event("[red]Cannot connect to API — is the backend running?[/red]")
+            self._log_event("[red]Cannot connect to API -- is the backend running?[/red]")
             return None
         except Exception as e:
             self._log_event(f"[red]Request failed: {e}[/red]")
@@ -334,12 +327,12 @@ class DisasterMeshTUI(App):
 
         for inc in incidents:
             severity = inc.get("severity", inc.get("priority", "P4"))
-            status = inc.get("status", "—")
+            status = inc.get("status", "?")
             confidence = inc.get("confidence", 0.0)
             sources = inc.get("source_provenance", [])
             lat = inc.get("lat", 0.0)
             lon = inc.get("lon", 0.0)
-            cluster_id = inc.get("cluster_id", "—")
+            cluster_id = inc.get("cluster_id", "?")
 
             # Count by severity
             if severity in counts:
@@ -348,18 +341,18 @@ class DisasterMeshTUI(App):
 
             # Source abbreviations
             src_short = {
-                "sms": "📱",
-                "whatsapp": "💬",
-                "web_form": "🌐",
-                "tweet": "🐦",
-                "satellite": "🛰️",
-                "iot_sensor": "📡",
-                "news": "📰",
+                "sms": "SMS",
+                "whatsapp": "WA",
+                "web_form": "WEB",
+                "tweet": "TWT",
+                "satellite": "SAT",
+                "iot_sensor": "IOT",
+                "news": "NEWS",
             }
-            sources_display = " ".join(src_short.get(s, s) for s in sources) if sources else "—"
+            sources_display = " ".join(src_short.get(s, s) for s in sources) if sources else "--"
 
             # Status icon
-            status_display = f"{STATUS_ICONS.get(status, '❓')} {status}"
+            status_display = f"{STATUS_ICONS.get(status, '[??]')} {status}"
 
             table.add_row(
                 f"[{PRIORITY_STYLES.get(severity, '')}]{severity}[/]",
@@ -387,13 +380,13 @@ class DisasterMeshTUI(App):
                 detail.detail_data = inc
                 return
 
-    # ── Auto-refresh ──────────────────────────────────────────────────────────
+    # -- Auto-refresh ---------------------------------------------------------
 
-    def _auto_refresh(self) -> None:
+    def _on_refresh_tick(self) -> None:
         """Periodically refresh incident data."""
         self.run_worker(self._load_incidents(), exclusive=True)
 
-    # ── WebSocket listener ────────────────────────────────────────────────────
+    # -- WebSocket listener ---------------------------------------------------
 
     @work(exclusive=True, exit_on_error=False)
     async def _listen_ws(self) -> None:
@@ -404,70 +397,68 @@ class DisasterMeshTUI(App):
             try:
                 async with websockets.connect(WS_URL) as ws:
                     self.ws_connected = True
-                    self._log_event("[bold green]✓[/bold green] WebSocket connected")
+                    self._log_event("[bold green]OK[/bold green] WebSocket connected")
 
                     async for message in ws:
                         try:
-                            event = json.loads(message)
+                            msg_text = message.decode() if isinstance(message, bytes) else message
+                            event = json.loads(msg_text)
                             self._handle_ws_event(event)
-                        except json.JSONDecodeError:
-                            self._log_event(f"[yellow]WS raw: {message}[/yellow]")
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            self._log_event(f"[yellow]WS raw: {message!r}[/yellow]")
 
             except Exception as e:
                 self.ws_connected = False
-                self._log_event(f"[yellow]WS disconnected: {e} — retrying in 5s...[/yellow]")
+                self._log_event(f"[yellow]WS disconnected: {e} -- retrying in 5s...[/yellow]")
                 await asyncio.sleep(5)
 
     def _handle_ws_event(self, event: dict[str, Any]) -> None:
         """Process a WebSocket event and update the UI."""
         event_type = event.get("event", "unknown")
-        cluster_id = event.get("cluster_id", "—")
+        cluster_id = event.get("cluster_id", "?")
 
         if event_type == "lifecycle_transition":
             old = event.get("old_status", "?")
             new = event.get("new_status", "?")
             ts = event.get("timestamp", "")
-            icon = STATUS_ICONS.get(new, "❓")
+            icon = STATUS_ICONS.get(new, "[??]")
             self._log_event(
-                f"{icon} [bold]{cluster_id}[/bold]: {old} → [bold green]{new}[/bold green]  ({ts})"
+                f"{icon} [bold]{cluster_id}[/bold]: {old} -> [bold green]{new}[/bold green]  ({ts})"
             )
             # Refresh data to pick up changes
             self.run_worker(self._load_incidents(), exclusive=True)
         else:
-            self._log_event(f"[cyan]Event: {event_type}[/cyan] — {json.dumps(event)[:200]}")
+            self._log_event(f"[cyan]Event: {event_type}[/cyan] -- {json.dumps(event)[:200]}")
 
-    # ── Event handlers ────────────────────────────────────────────────────────
+    # -- Event handlers -------------------------------------------------------
 
     @on(DataTable.RowSelected, "#incidents-table")
     def on_row_selected(self, event: DataTable.RowSelected) -> None:
         """When a row is selected, update the detail panel."""
-        if event.row_index is None:
-            return
-
         table = self.query_one("#incidents-table", DataTable)
-        row_data = table.get_row_at(event.row_index)
+        row_data = table.get_row_at(event.cursor_row)
         if row_data and len(row_data) >= 7:
             cluster_id = str(row_data[6])  # Last column is cluster_id
             self.selected_cluster_id = cluster_id
             self._update_detail_for_cluster(cluster_id)
 
-    # ── Actions ───────────────────────────────────────────────────────────────
+    # -- Actions --------------------------------------------------------------
 
     def action_refresh(self) -> None:
         """Manually refresh incident data."""
-        self._log_event("[bold]🔄 Refreshing...[/bold]")
+        self._log_event("[bold]Refreshing...[/bold]")
         self.run_worker(self._load_incidents(), exclusive=True)
 
     def action_dispatch(self) -> None:
         """Dispatch responders to the selected incident."""
         if not self.selected_cluster_id:
             self._log_event(
-                "[yellow]⚠ No incident selected — press ↑/↓ to select one first[/yellow]"
+                "[yellow]No incident selected -- press UP/DOWN to select one first[/yellow]"
             )
             return
 
         self._log_event(
-            f"[bold]🚒 Dispatching responders to [cyan]{self.selected_cluster_id}[/cyan]...[/bold]"
+            f"[bold]Dispatching responders to [cyan]{self.selected_cluster_id}[/cyan]...[/bold]"
         )
         self._dispatch_incident(self.selected_cluster_id)
 
@@ -478,20 +469,20 @@ class DisasterMeshTUI(App):
         if result is None:
             return
 
-        status = result.get("status", "—")
+        status = result.get("status", "?")
         assignments = result.get("assignments", [])
-        solver = result.get("solver_status", "—")
+        solver = result.get("solver_status", "?")
         reason = result.get("reason", "")
 
         if assignments:
             resp_ids = [a.get("responder_id", "?")[:12] for a in assignments]
             self._log_event(
-                f"[bold green]✓[/bold green] Dispatched {len(assignments)} responder(s) to "
+                f"[bold green]OK[/bold green] Dispatched {len(assignments)} responder(s) to "
                 f"[cyan]{cluster_id}[/cyan]: {', '.join(resp_ids)} (solver={solver})"
             )
         else:
             self._log_event(
-                f"[yellow]⚠ No responders assigned to {cluster_id}: "
+                f"[yellow]No responders assigned to {cluster_id}: "
                 f"status={status} reason={reason}[/yellow]"
             )
 
@@ -501,11 +492,11 @@ class DisasterMeshTUI(App):
     def action_summary(self) -> None:
         """Fetch and display the situational summary for the selected incident."""
         if not self.selected_cluster_id:
-            self._log_event("[yellow]⚠ No incident selected[/yellow]")
+            self._log_event("[yellow]No incident selected[/yellow]")
             return
 
         self._log_event(
-            f"[bold]📋 Fetching summary for [cyan]{self.selected_cluster_id}[/cyan]...[/bold]"
+            f"[bold]Fetching summary for [cyan]{self.selected_cluster_id}[/cyan]...[/bold]"
         )
         self._fetch_summary(self.selected_cluster_id)
 
@@ -517,9 +508,9 @@ class DisasterMeshTUI(App):
             return
 
         human = result.get("human_summary", "No summary available")
-        self._log_event(f"[bold cyan]📋 Situational Summary:[/bold cyan]\n{human}")
+        self._log_event(f"[bold cyan]Situational Summary:[/bold cyan]\n{human}")
 
-    # ── Logging ───────────────────────────────────────────────────────────────
+    # -- Logging --------------------------------------------------------------
 
     def _log_event(self, message: str) -> None:
         """Append a message to the event log panel."""
@@ -531,7 +522,7 @@ class DisasterMeshTUI(App):
             pass
 
 
-# ── Entry point ──────────────────────────────────────────────────────────────
+# -- Entry point --------------------------------------------------------------
 
 
 def main() -> None:
