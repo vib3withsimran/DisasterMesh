@@ -432,15 +432,17 @@ class DisasterMeshTUI(App):
 
     # -- Event handlers -------------------------------------------------------
 
-    @on(DataTable.RowSelected, "#incidents-table")
-    def on_row_selected(self, event: DataTable.RowSelected) -> None:
-        """When a row is selected, update the detail panel."""
+    @on(DataTable.RowHighlighted, "#incidents-table")
+    def on_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        """When a row is highlighted (UP/DOWN), update the detail panel."""
         table = self.query_one("#incidents-table", DataTable)
-        row_data = table.get_row_at(event.cursor_row)
-        if row_data and len(row_data) >= 7:
-            cluster_id = str(row_data[6])  # Last column is cluster_id
-            self.selected_cluster_id = cluster_id
-            self._update_detail_for_cluster(cluster_id)
+        row_idx = event.cursor_row
+        if row_idx is not None:
+            row_data = table.get_row_at(row_idx)
+            if row_data and len(row_data) >= 7:
+                cluster_id = str(row_data[6])  # Last column is cluster_id
+                self.selected_cluster_id = cluster_id
+                self._update_detail_for_cluster(cluster_id)
 
     # -- Actions --------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Incident, Responder } from "@/lib/api";
@@ -10,26 +10,6 @@ const PRIORITY_COLORS: Record<string, string> = {
   P2: "#f97316",
   P3: "#eab308",
   P4: "#64748b",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  REPORTED: "#3b82f6",
-  VERIFIED: "#a855f7",
-  ASSIGNED: "#f97316",
-  EN_ROUTE: "#eab308",
-  ON_SCENE: "#22c55e",
-  RESOLVED: "#64748b",
-};
-
-// Tile URLs per language — CartoDB (reliable, English labels) + OSM default
-const TILE_URLS: Record<string, string> = {
-  en: "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-  local: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-};
-
-const TILE_ATTRIBUTIONS: Record<string, string> = {
-  en: "Map data &copy; OpenStreetMap contributors, Tiles by CartoDB",
-  local: "Map data &copy; OpenStreetMap contributors",
 };
 
 function createIncidentMarker(el: HTMLElement, severity: string, status: string) {
@@ -69,24 +49,8 @@ export default function MapView({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
-  const [mapLanguage, setMapLanguage] = useState<"en" | "local">("en");
 
-  // Switch tile source when language changes
-  const switchLanguage = useCallback((lang: "en" | "local") => {
-    if (!map.current) return;
-    const style = map.current.getStyle();
-    if (style.sources.osm) {
-      // CartoDB tiles are @2x (512px), OSM is 256px — adjust tileSize
-      const isHighRes = lang === "en";
-      (style.sources.osm as any).tiles = [TILE_URLS[lang]];
-      (style.sources.osm as any).tileSize = isHighRes ? 512 : 256;
-      (style.sources.osm as any).attribution = TILE_ATTRIBUTIONS[lang];
-      map.current.setStyle(style);
-    }
-    setMapLanguage(lang);
-  }, []);
-
-  // Initialize map
+  // Initialize map — standard OSM tiles, fully free, no API key, no watermark
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
@@ -97,9 +61,9 @@ export default function MapView({
         sources: {
           osm: {
             type: "raster",
-            tiles: [TILE_URLS.en],
-            tileSize: 512,
-            attribution: TILE_ATTRIBUTIONS.en,
+            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            attribution: "Map data &copy; OpenStreetMap contributors",
           },
         },
         layers: [
@@ -118,10 +82,10 @@ export default function MapView({
       center: [85.324, 27.7172],
       zoom: 10,
       pitch: 0,
-      attributionControl: false,
     });
 
     map.current.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.current.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
     // Add pulse animation CSS
     const style = document.createElement("style");
@@ -267,36 +231,6 @@ export default function MapView({
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
-
-      {/* Language toggle */}
-      <div
-        className="absolute top-2 left-2 z-10 flex rounded-lg overflow-hidden border"
-        style={{
-          background: "var(--bg-card)",
-          borderColor: "var(--border-subtle)",
-        }}
-      >
-        <button
-          onClick={() => switchLanguage("en")}
-          className="px-3 py-1.5 text-[10px] font-medium transition-colors"
-          style={{
-            background: mapLanguage === "en" ? "var(--accent-blue)" : "transparent",
-            color: mapLanguage === "en" ? "white" : "var(--text-secondary)",
-          }}
-        >
-          English
-        </button>
-        <button
-          onClick={() => switchLanguage("local")}
-          className="px-3 py-1.5 text-[10px] font-medium transition-colors"
-          style={{
-            background: mapLanguage === "local" ? "var(--accent-blue)" : "transparent",
-            color: mapLanguage === "local" ? "white" : "var(--text-secondary)",
-          }}
-        >
-          Local
-        </button>
-      </div>
     </div>
   );
 }

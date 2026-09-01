@@ -9,8 +9,10 @@ from functools import lru_cache
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Explicitly load .env file into os.environ
+# Explicitly load .env and .env.local files into os.environ
+# .env.local overrides .env (common convention for local secrets)
 load_dotenv()
+load_dotenv(".env.local")
 
 
 class Settings(BaseSettings):

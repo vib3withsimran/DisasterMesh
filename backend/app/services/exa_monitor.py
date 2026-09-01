@@ -21,6 +21,7 @@ import logging
 import os
 import re
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -366,6 +367,14 @@ async def feed_exa_to_pipeline(
 
 if __name__ == "__main__":
     import argparse
+
+    # Load .env.local if present (for EXA_API_KEY etc.)
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env.local")
+    except ImportError:
+        pass
 
     parser = argparse.ArgumentParser(description="Exa social media monitor for DisasterMesh")
     parser.add_argument("--api", default="http://localhost:8000", help="Backend API URL")

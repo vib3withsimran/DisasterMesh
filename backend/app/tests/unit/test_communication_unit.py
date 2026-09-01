@@ -175,11 +175,16 @@ class TestNotificationMockMode:
         assignment = _make_assignment()
         incident = _make_incident(IncidentStatus.ASSIGNED)
 
-        # Ensure Twilio env vars are absent
+        # Ensure Vonage + Twilio env vars are absent (force mock mode)
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("TWILIO_ACCOUNT_SID", None)
-            os.environ.pop("TWILIO_AUTH_TOKEN", None)
-            os.environ.pop("TWILIO_FROM_NUMBER", None)
+            for key in (
+                "VONAGE_API_KEY",
+                "VONAGE_API_SECRET",
+                "TWILIO_ACCOUNT_SID",
+                "TWILIO_AUTH_TOKEN",
+                "TWILIO_FROM_NUMBER",
+            ):
+                os.environ.pop(key, None)
 
             result = await self.agent.notify_responder_assignment(
                 assignment=assignment,
@@ -210,8 +215,13 @@ class TestNotificationMockMode:
         incident = _make_incident(IncidentStatus.ASSIGNED)
 
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("TWILIO_ACCOUNT_SID", None)
-            os.environ.pop("TWILIO_AUTH_TOKEN", None)
+            for key in (
+                "VONAGE_API_KEY",
+                "VONAGE_API_SECRET",
+                "TWILIO_ACCOUNT_SID",
+                "TWILIO_AUTH_TOKEN",
+            ):
+                os.environ.pop(key, None)
             await self.agent.notify_responder_assignment(
                 assignment=assignment,
                 responder_name="Alpha Team",
@@ -234,8 +244,13 @@ class TestNotificationMockMode:
         db.add = MagicMock()
 
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("TWILIO_ACCOUNT_SID", None)
-            os.environ.pop("TWILIO_AUTH_TOKEN", None)
+            for key in (
+                "VONAGE_API_KEY",
+                "VONAGE_API_SECRET",
+                "TWILIO_ACCOUNT_SID",
+                "TWILIO_AUTH_TOKEN",
+            ):
+                os.environ.pop(key, None)
 
             result = await self.agent.notify_citizen_status(
                 phone="+919876543210",
@@ -260,8 +275,13 @@ class TestNotificationMockMode:
         db.add = MagicMock()
 
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("TWILIO_ACCOUNT_SID", None)
-            os.environ.pop("TWILIO_AUTH_TOKEN", None)
+            for key in (
+                "VONAGE_API_KEY",
+                "VONAGE_API_SECRET",
+                "TWILIO_ACCOUNT_SID",
+                "TWILIO_AUTH_TOKEN",
+            ):
+                os.environ.pop(key, None)
 
             for status in IncidentStatus:
                 db.add.reset_mock()
