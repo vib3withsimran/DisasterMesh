@@ -21,14 +21,14 @@ const STATUS_COLORS: Record<string, string> = {
   RESOLVED: "#64748b",
 };
 
-// Tile URLs per language
+// Tile URLs per language — CartoDB (reliable, English labels) + OSM default
 const TILE_URLS: Record<string, string> = {
-  en: "https://tiles.openstreetmap.fr/en/{z}/{x}/{y}.png",
+  en: "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
   local: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
 };
 
 const TILE_ATTRIBUTIONS: Record<string, string> = {
-  en: "Map data &copy; OpenStreetMap contributors, Tiles by Stamen Design",
+  en: "Map data &copy; OpenStreetMap contributors, Tiles by CartoDB",
   local: "Map data &copy; OpenStreetMap contributors",
 };
 
@@ -76,7 +76,10 @@ export default function MapView({
     if (!map.current) return;
     const style = map.current.getStyle();
     if (style.sources.osm) {
+      // CartoDB tiles are @2x (512px), OSM is 256px — adjust tileSize
+      const isHighRes = lang === "en";
       (style.sources.osm as any).tiles = [TILE_URLS[lang]];
+      (style.sources.osm as any).tileSize = isHighRes ? 512 : 256;
       (style.sources.osm as any).attribution = TILE_ATTRIBUTIONS[lang];
       map.current.setStyle(style);
     }
@@ -95,7 +98,7 @@ export default function MapView({
           osm: {
             type: "raster",
             tiles: [TILE_URLS.en],
-            tileSize: 256,
+            tileSize: 512,
             attribution: TILE_ATTRIBUTIONS.en,
           },
         },
@@ -105,9 +108,9 @@ export default function MapView({
             type: "raster",
             source: "osm",
             paint: {
-              "raster-brightness-max": 0.9,
+              "raster-brightness-max": 1.0,
               "raster-saturation": 0,
-              "raster-contrast": 0.05,
+              "raster-contrast": 0,
             },
           },
         ],
