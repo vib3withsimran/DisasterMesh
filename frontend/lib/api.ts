@@ -166,6 +166,11 @@ export async function fetchSummary(clusterId: string): Promise<SituationalSummar
   return apiGet(`/incidents/${clusterId}/summary`);
 }
 
+/** Reset all responders back to available (demo reset). */
+export async function resetResponders(): Promise<{ reset: number; status: string }> {
+  return apiPost("/responders/reset");
+}
+
 /** Health check. */
 export async function healthCheck(): Promise<{ status: string; version: string }> {
   return apiGet("/health");

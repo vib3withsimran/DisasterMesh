@@ -154,6 +154,10 @@ uv.lock
 poetry.lock
 package-lock.json
 
+# ── Graphify Cache & Backups ──────────────
+graphify-out/cache/
+graphify-out/20*/
+
 # ── Misc ──────────────────────────────────
 *.bak
 *.tmp

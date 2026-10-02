@@ -16,44 +16,16 @@ from app.schemas import (
 router = APIRouter()
 
 
+from app.incident_utils import normalize_incident_dict
+
+
 def _transform_incident(raw: dict) -> dict:
     """Transform a raw Qdrant payload into the frontend Incident interface.
 
-    Handles both proto incidents (raw ingestion) and verified incidents.
-    Proto incidents lack cluster_id/confidence/severity so we provide defaults.
+    Uses canonical normalization to ensure realistic confidence, severity, and needs
+    across both verified and proto incidents.
     """
-    ts_epoch = raw.get("timestamp_epoch")
-    ts = (
-        datetime.fromtimestamp(ts_epoch, tz=UTC).isoformat()
-        if ts_epoch
-        else datetime.now(UTC).isoformat()
-    )
-
-    needs_raw = raw.get("needs") or {}
-    source = raw.get("source", "")
-    provenance = raw.get("source_provenance", [])
-    if not provenance and source:
-        provenance = [source]
-
-    return {
-        "cluster_id": raw.get("cluster_id", raw.get("proto_id", raw.get("id", ""))),
-        "source_provenance": provenance,
-        "lat": raw.get("lat", 0.0),
-        "lon": raw.get("lon", 0.0),
-        "timestamp": ts,
-        "confidence": float(raw.get("confidence", 0.3)),
-        "severity": raw.get("severity", "P3"),
-        "needs": {
-            "medical": needs_raw.get("medical", False),
-            "shelter": needs_raw.get("shelter", False),
-            "evacuation": needs_raw.get("evacuation", False),
-            "rescue": needs_raw.get("rescue", False),
-            "water": needs_raw.get("water", False),
-            "food": needs_raw.get("food", False),
-        },
-        "media_urls": raw.get("media_urls", []),
-        "status": raw.get("status", "REPORTED"),
-    }
+    return normalize_incident_dict(raw)
 
 
 @router.get("/search/semantic", summary="Semantic search for incidents")

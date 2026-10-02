@@ -463,12 +463,255 @@ def seed_responders() -> None:
     _write(BASE / "responder_registry.json", teams)
 
 
+def seed_live_backend(api_url: str = "http://localhost:8000") -> bool:
+    """
+    If the backend API is reachable at `api_url`, populate it with realistic
+    responder teams and multi-source flood incident reports.
+    """
+    try:
+        import httpx
+    except ImportError:
+        print("  ⚠️ httpx not installed -- skipping live API seeding.")
+        return False
+
+    api_url = api_url.rstrip("/")
+    try:
+        resp = httpx.get(f"{api_url}/health", timeout=3.0)
+        if resp.status_code != 200:
+            print(f"  ℹ️ Backend at {api_url} returned {resp.status_code} -- skipping live API ingest.")
+            return False
+    except Exception:
+        print(f"  ℹ️ Backend not running at {api_url} (start it with uvicorn to populate live data).")
+        return False
+
+    print(f"\n🚀 Seeding live backend at {api_url} with rich demo data...")
+
+    # 1. Responders
+    responders = [
+        {
+            "name": "Kathmandu Medical Response Alpha",
+            "team_type": "medical",
+            "capabilities": ["medical", "rescue"],
+            "team_size": 8,
+            "capacity": 3,
+            "lat": 27.7172,
+            "lon": 85.3240,
+        },
+        {
+            "name": "NDRF Nepal Flood Rescue Bravo",
+            "team_type": "rescue",
+            "capabilities": ["rescue", "water"],
+            "team_size": 12,
+            "capacity": 4,
+            "lat": 27.6810,
+            "lon": 85.4300,
+        },
+        {
+            "name": "Bhaktapur Civil Defence Charlie",
+            "team_type": "logistics",
+            "capabilities": ["logistics", "evacuation"],
+            "team_size": 6,
+            "capacity": 2,
+            "lat": 27.6710,
+            "lon": 85.4298,
+        },
+        {
+            "name": "Lalitpur Emergency Medical Delta",
+            "team_type": "medical",
+            "capabilities": ["medical"],
+            "team_size": 5,
+            "capacity": 2,
+            "lat": 27.6644,
+            "lon": 85.3188,
+        },
+        {
+            "name": "Pokhara Water Rescue Echo",
+            "team_type": "rescue",
+            "capabilities": ["water", "rescue", "evacuation"],
+            "team_size": 10,
+            "capacity": 3,
+            "lat": 28.2096,
+            "lon": 83.9856,
+        },
+        {
+            "name": "NDRF Battalion 8 (Delhi Unit)",
+            "team_type": "rescue",
+            "capabilities": ["medical", "rescue", "water"],
+            "team_size": 12,
+            "capacity": 3,
+            "lat": 28.6670,
+            "lon": 77.2330,
+        },
+    ]
+
+    for team in responders:
+        try:
+            r = httpx.post(f"{api_url}/responders", json=team, timeout=5.0)
+            if r.status_code in (200, 201):
+                print(f"  ✓ Responder registered: {team['name']}")
+        except Exception as e:
+            print(f"  ✗ Failed to register {team['name']}: {e}")
+
+    # 2. Multi-source reports
+    reports = [
+        # Bagmati River Cluster -- Multi-source corroborated (SMS + Tweet + Satellite + IoT)
+        (
+            "/ingest/report",
+            {
+                "source": "sms",
+                "text": "Water rising fast in Bagmati river, children and elderly trapped on rooftops. Need boats urgently!",
+                "lat": 27.6800,
+                "lon": 85.4200,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Bagmati SMS report (P1 critical rescue)",
+        ),
+        (
+            "/ingest/social",
+            {
+                "source": "tweet",
+                "text": "BREAKING: Kathmandu valley flooded! Bagmati river overflowing, families on rooftops. Need immediate rescue #NepalFloods",
+                "lat": 27.6810,
+                "lon": 85.4210,
+                "url": "https://twitter.com/NepalAlert/status/1001",
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Bagmati Tweet corroboration",
+        ),
+        (
+            "/ingest/sensor",
+            {
+                "source": "iot_sensor",
+                "sensor_id": "WL-BAGMATI-001",
+                "sensor_type": "water_level",
+                "value": 4.8,
+                "unit": "metres",
+                "lat": 27.6800,
+                "lon": 85.4200,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Bagmati IoT water gauge (4.8m critical)",
+        ),
+        (
+            "/ingest/satellite",
+            {
+                "source": "satellite",
+                "geojson": {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [
+                            [
+                                [85.4150, 27.6750],
+                                [85.4250, 27.6750],
+                                [85.4250, 27.6850],
+                                [85.4150, 27.6850],
+                                [85.4150, 27.6750],
+                            ]
+                        ],
+                    },
+                    "properties": {
+                        "flood_area_km2": 4.2,
+                        "water_depth_m": 2.1,
+                        "source": "Sentinel-2 NDWI",
+                    },
+                },
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Bagmati Sentinel-2 satellite polygon",
+        ),
+        # Bhaktapur Heritage Cluster -- Corroborated (SMS + Tweet)
+        (
+            "/ingest/report",
+            {
+                "source": "sms",
+                "text": "Bhaktapur ancient temples submerged. Elderly residents trapped, medical help needed urgently!",
+                "lat": 27.6710,
+                "lon": 85.4298,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Bhaktapur SMS (medical + rescue)",
+        ),
+        (
+            "/ingest/social",
+            {
+                "source": "tweet",
+                "text": "Bhaktapur completely flooded. Families need medical evacuation immediately #NepalFloods2026",
+                "lat": 27.6712,
+                "lon": 85.4300,
+                "url": "https://twitter.com/HeritageWatch/status/1003",
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Bhaktapur Tweet corroboration",
+        ),
+        # Lalitpur Cluster -- Corroborated (SMS + Tweet)
+        (
+            "/ingest/report",
+            {
+                "source": "sms",
+                "text": "Flooding in Lalitpur, roads blocked, drinking water and shelter required for displaced families.",
+                "lat": 27.6644,
+                "lon": 85.3188,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Lalitpur SMS (shelter + water)",
+        ),
+        (
+            "/ingest/social",
+            {
+                "source": "tweet",
+                "text": "Devastating floods in Lalitpur. Water levels rising. Local authorities overwhelmed. Please help!",
+                "lat": 27.6646,
+                "lon": 85.3190,
+                "url": "https://twitter.com/NepalNews/status/1002",
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Lalitpur Tweet corroboration",
+        ),
+        # Terai Single Source Report
+        (
+            "/ingest/report",
+            {
+                "source": "sms",
+                "text": "Terai region flood, water 4 feet deep, 20 families stranded. Need rations and clean water.",
+                "lat": 27.6800,
+                "lon": 85.4250,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            "Terai SMS (food + water)",
+        ),
+    ]
+
+    for endpoint, payload, label in reports:
+        try:
+            r = httpx.post(f"{api_url}{endpoint}", json=payload, timeout=10.0)
+            if r.status_code == 200:
+                print(f"  ✓ Ingested: {label}")
+            else:
+                print(f"  ✗ Ingest failed for {label}: HTTP {r.status_code}")
+        except Exception as e:
+            print(f"  ✗ Failed to ingest {label}: {e}")
+
+    print("\n✅ Live backend seeded! Open the TUI or frontend to inspect real demo data.")
+    return True
+
+
 if __name__ == "__main__":
-    print("🌱 Seeding demo_data/ with realistic mock records...")
+    import argparse
+
+    parser = argparse.ArgumentParser(description="DisasterMesh Demo Data Seeder")
+    parser.add_argument("--api", default="http://localhost:8000", help="Live backend URL (default: http://localhost:8000)")
+    parser.add_argument("--skip-live", action="store_true", help="Skip seeding the live backend API")
+    args = parser.parse_args()
+
+    print("🌱 Generating demo_data/ mock records on disk...")
     seed_citizen_reports()
     seed_social_posts()
     seed_satellite_polygons()
     seed_sensor_data()
     seed_responders()
-    print("\n✅ Done. All demo_data/ files populated.")
-    print("   Tip: POST these through /ingest/* to test the pipeline end-to-end.")
+    print("✅ All demo_data/ disk files populated.")
+
+    if not args.skip_live:
+        seed_live_backend(api_url=args.api)
+

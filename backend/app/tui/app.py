@@ -160,9 +160,9 @@ class DisasterMeshTUI(App):
     CSS = """
     Screen {
         layout: grid;
-        grid-size: 2 2;
-        grid-columns: 2fr 1fr;
-        grid-rows: auto 1fr;
+        grid-size: 2 3;
+        grid-columns: 3fr 2fr;
+        grid-rows: auto 1fr 18;
     }
 
     #summary-bar {
@@ -189,7 +189,7 @@ class DisasterMeshTUI(App):
 
     #event-stream {
         column-span: 2;
-        height: 8;
+        height: 100%;
         border: solid $accent;
         background: $surface-darken-1;
     }
@@ -206,6 +206,7 @@ class DisasterMeshTUI(App):
         Binding("r", "refresh", "Refresh", show=True),
         Binding("d", "dispatch", "Dispatch", show=True),
         Binding("s", "summary", "Summary", show=True),
+        Binding("ctrl+x", "reset_responders", "Reset Responders", show=True),
     ]
 
     # Reactive state
@@ -267,40 +268,56 @@ class DisasterMeshTUI(App):
     # -- Data loading ---------------------------------------------------------
 
     async def _api_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
-        """Make a GET request to the backend API."""
-        if not self._http_client:
-            return None
-        try:
-            resp = await self._http_client.get(f"{self.api_base}{path}", params=params)
-            resp.raise_for_status()
-            return resp.json()
-        except httpx.HTTPStatusError as e:
-            self._log_event(f"[red]API error {e.response.status_code}: {path}[/red]")
-            return None
-        except httpx.ConnectError:
-            self._log_event("[red]Cannot connect to API -- is the backend running?[/red]")
-            return None
-        except Exception as e:
-            self._log_event(f"[red]Request failed: {e}[/red]")
-            return None
+        """Make a GET request to the backend API with auto-reconnect."""
+        for attempt in range(2):
+            if not self._http_client or self._http_client.is_closed:
+                self._http_client = httpx.AsyncClient(timeout=10.0)
+            try:
+                resp = await self._http_client.get(f"{self.api_base}{path}", params=params)
+                resp.raise_for_status()
+                return resp.json()
+            except (httpx.ConnectError, httpx.TransportError, httpx.PoolTimeout) as e:
+                try:
+                    await self._http_client.aclose()
+                except Exception:
+                    pass
+                self._http_client = httpx.AsyncClient(timeout=10.0)
+                if attempt == 1:
+                    self._log_event(f"[red]Cannot connect to API: {e.__class__.__name__}[/red]")
+                    return None
+            except httpx.HTTPStatusError as e:
+                self._log_event(f"[red]API error {e.response.status_code}: {path}[/red]")
+                return None
+            except Exception as e:
+                self._log_event(f"[red]Request failed: {e}[/red]")
+                return None
+        return None
 
     async def _api_post(self, path: str, json_data: dict[str, Any] | None = None) -> Any:
-        """Make a POST request to the backend API."""
-        if not self._http_client:
-            return None
-        try:
-            resp = await self._http_client.post(f"{self.api_base}{path}", json=json_data)
-            resp.raise_for_status()
-            return resp.json()
-        except httpx.HTTPStatusError as e:
-            self._log_event(f"[red]API error {e.response.status_code}: {path}[/red]")
-            return None
-        except httpx.ConnectError:
-            self._log_event("[red]Cannot connect to API -- is the backend running?[/red]")
-            return None
-        except Exception as e:
-            self._log_event(f"[red]Request failed: {e}[/red]")
-            return None
+        """Make a POST request to the backend API with auto-reconnect."""
+        for attempt in range(2):
+            if not self._http_client or self._http_client.is_closed:
+                self._http_client = httpx.AsyncClient(timeout=10.0)
+            try:
+                resp = await self._http_client.post(f"{self.api_base}{path}", json=json_data)
+                resp.raise_for_status()
+                return resp.json()
+            except (httpx.ConnectError, httpx.TransportError, httpx.PoolTimeout) as e:
+                try:
+                    await self._http_client.aclose()
+                except Exception:
+                    pass
+                self._http_client = httpx.AsyncClient(timeout=10.0)
+                if attempt == 1:
+                    self._log_event(f"[red]Cannot connect to API: {e.__class__.__name__}[/red]")
+                    return None
+            except httpx.HTTPStatusError as e:
+                self._log_event(f"[red]API error {e.response.status_code}: {path}[/red]")
+                return None
+            except Exception as e:
+                self._log_event(f"[red]Request failed: {e}[/red]")
+                return None
+        return None
 
     async def _load_incidents(self) -> None:
         """Fetch incidents from the API and update the table."""
@@ -324,8 +341,9 @@ class DisasterMeshTUI(App):
         table.clear()
 
         counts = {"P1": 0, "P2": 0, "P3": 0, "P4": 0, "total": 0}
+        restore_row: int | None = None  # row index to restore cursor to after rebuild
 
-        for inc in incidents:
+        for i, inc in enumerate(incidents):
             severity = inc.get("severity", inc.get("priority", "P4"))
             status = inc.get("status", "?")
             confidence = inc.get("confidence", 0.0)
@@ -333,6 +351,10 @@ class DisasterMeshTUI(App):
             lat = inc.get("lat", 0.0)
             lon = inc.get("lon", 0.0)
             cluster_id = inc.get("cluster_id", "?")
+
+            # Track which row the currently-selected incident lands on after rebuild
+            if cluster_id == self.selected_cluster_id:
+                restore_row = i
 
             # Count by severity
             if severity in counts:
@@ -361,8 +383,14 @@ class DisasterMeshTUI(App):
                 sources_display,
                 f"{lat:.4f}",
                 f"{lon:.4f}",
-                cluster_id[:20],
+                cluster_id[:20] + "…" if len(cluster_id) > 20 else cluster_id,
+                key=cluster_id,  # full UUID stored as row key for dispatch/summary
             )
+
+        # Restore cursor to the previously selected row so auto-refresh
+        # doesn't jump the user back to row 0 every 5 seconds
+        if restore_row is not None:
+            table.move_cursor(row=restore_row)
 
         # Update summary bar
         summary = self.query_one("#summary-bar", IncidentSummary)
@@ -434,15 +462,19 @@ class DisasterMeshTUI(App):
 
     @on(DataTable.RowHighlighted, "#incidents-table")
     def on_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
-        """When a row is highlighted (UP/DOWN), update the detail panel."""
-        table = self.query_one("#incidents-table", DataTable)
-        row_idx = event.cursor_row
-        if row_idx is not None:
-            row_data = table.get_row_at(row_idx)
-            if row_data and len(row_data) >= 7:
-                cluster_id = str(row_data[6])  # Last column is cluster_id
-                self.selected_cluster_id = cluster_id
-                self._update_detail_for_cluster(cluster_id)
+        """When arrow-key navigation moves to a row, update selection immediately."""
+        if event.row_key and event.row_key.value:
+            cluster_id = str(event.row_key.value)
+            self.selected_cluster_id = cluster_id
+            self._update_detail_for_cluster(cluster_id)
+
+    @on(DataTable.RowSelected, "#incidents-table")
+    def on_row_selected(self, event: DataTable.RowSelected) -> None:
+        """When a row is selected (Enter/click), update selection."""
+        if event.row_key and event.row_key.value:
+            cluster_id = str(event.row_key.value)
+            self.selected_cluster_id = cluster_id
+            self._update_detail_for_cluster(cluster_id)
 
     # -- Actions --------------------------------------------------------------
 
@@ -466,9 +498,17 @@ class DisasterMeshTUI(App):
 
     @work(exclusive=False, exit_on_error=False)
     async def _dispatch_incident(self, cluster_id: str) -> None:
-        """Call the dispatch API for a specific incident."""
-        result = await self._api_post(f"/dispatch/{cluster_id}")
-        if result is None:
+        """Call the dispatch API for a specific incident (own client to avoid pool contention)."""
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(f"{self.api_base}/dispatch/{cluster_id}")
+                resp.raise_for_status()
+                result = resp.json()
+        except httpx.HTTPStatusError as e:
+            self._log_event(f"[red]Dispatch API error {e.response.status_code}[/red]")
+            return
+        except Exception as e:
+            self._log_event(f"[red]Dispatch failed: {e}[/red]")
             return
 
         status = result.get("status", "?")
@@ -502,15 +542,54 @@ class DisasterMeshTUI(App):
         )
         self._fetch_summary(self.selected_cluster_id)
 
+    def action_reset_responders(self) -> None:
+        """Reset all responders back to available status."""
+        self._log_event("[bold yellow]Resetting all responders to available...[/bold yellow]")
+        self._reset_responders()
+
+    @work(exclusive=False, exit_on_error=False)
+    async def _reset_responders(self) -> None:
+        """Call POST /responders/reset and report the result."""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(f"{self.api_base}/responders/reset")
+                resp.raise_for_status()
+                result = resp.json()
+        except httpx.HTTPStatusError as e:
+            self._log_event(f"[red]Reset API error {e.response.status_code}[/red]")
+            return
+        except Exception as e:
+            self._log_event(f"[red]Reset failed: {e}[/red]")
+            return
+
+        n = result.get("reset", "?")
+        self._log_event(
+            f"[bold green]OK[/bold green] {n} responder(s) reset to "
+            f"[bold green]available[/bold green] — press [bold]d[/bold] to dispatch"
+        )
+        # Refresh table to show updated responder assignments
+        await self._load_incidents()
+
     @work(exclusive=False, exit_on_error=False)
     async def _fetch_summary(self, cluster_id: str) -> None:
-        """Fetch situational summary from the API."""
-        result = await self._api_get(f"/incidents/{cluster_id}/summary")
-        if result is None:
+        """Fetch situational summary (own client to avoid pool contention)."""
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(f"{self.api_base}/incidents/{cluster_id}/summary")
+                resp.raise_for_status()
+                result = resp.json()
+        except httpx.HTTPStatusError as e:
+            self._log_event(f"[red]Summary API error {e.response.status_code}[/red]")
+            return
+        except Exception as e:
+            self._log_event(f"[red]Summary failed: {e}[/red]")
             return
 
         human = result.get("human_summary", "No summary available")
-        self._log_event(f"[bold cyan]Situational Summary:[/bold cyan]\n{human}")
+        # Write plain text (no Rich markup) to avoid parse errors with emoji/box chars
+        self._log_event("[bold cyan]── Situational Summary ──[/bold cyan]")
+        log = self.query_one("#event-log", RichLog)
+        log.write(human)
 
     # -- Logging --------------------------------------------------------------
 

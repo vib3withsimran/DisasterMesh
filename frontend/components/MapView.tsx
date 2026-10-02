@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Incident, Responder } from "@/lib/api";
@@ -10,6 +10,41 @@ const PRIORITY_COLORS: Record<string, string> = {
   P2: "#f97316",
   P3: "#eab308",
   P4: "#64748b",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  REPORTED: "#3b82f6",
+  VERIFIED: "#a855f7",
+  ASSIGNED: "#f97316",
+  EN_ROUTE: "#eab308",
+  ON_SCENE: "#22c55e",
+  RESOLVED: "#64748b",
+};
+
+// Tile URLs — 100% free, high-resolution global coverage, NO watermark, NO missing tiles
+const TILE_CONFIG: Record<string, { url: string; attribution: string; dark: boolean }> = {
+  dark: {
+    url: "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+    attribution: "&copy; OpenStreetMap contributors",
+    dark: true,
+  },
+  satellite: {
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "&copy; Esri &mdash; World Imagery",
+    dark: false,
+  },
+};
+
+const DARK_PAINT = {
+  "raster-saturation": -0.85,
+  "raster-brightness-max": 0.45,
+  "raster-contrast": 0.25,
+};
+
+const NORMAL_PAINT = {
+  "raster-saturation": 0,
+  "raster-brightness-max": 1,
+  "raster-contrast": 0,
 };
 
 function createIncidentMarker(el: HTMLElement, severity: string, status: string) {
@@ -49,8 +84,31 @@ export default function MapView({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+  const [mapMode, setMapMode] = useState<"dark" | "satellite">("dark");
 
-  // Initialize map — standard OSM tiles, fully free, no API key, no watermark
+  // Switch tile source and paint properties when mode changes
+  const switchMode = useCallback((mode: "dark" | "satellite") => {
+    if (!map.current) return;
+    const cfg = TILE_CONFIG[mode];
+    const style = map.current.getStyle();
+    if (style.sources.osm) {
+      (style.sources.osm as any).tiles = [cfg.url];
+      (style.sources.osm as any).attribution = cfg.attribution;
+      map.current.setStyle(style);
+
+      const paint = cfg.dark ? DARK_PAINT : NORMAL_PAINT;
+      Object.entries(paint).forEach(([k, v]) => {
+        try {
+          map.current?.setPaintProperty("osm", k, v);
+        } catch {
+          // Ignore if layer not ready
+        }
+      });
+    }
+    setMapMode(mode);
+  }, []);
+
+  // Initialize map
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
@@ -61,9 +119,9 @@ export default function MapView({
         sources: {
           osm: {
             type: "raster",
-            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tiles: [TILE_CONFIG.dark.url],
             tileSize: 256,
-            attribution: "Map data &copy; OpenStreetMap contributors",
+            attribution: TILE_CONFIG.dark.attribution,
           },
         },
         layers: [
@@ -71,17 +129,14 @@ export default function MapView({
             id: "osm",
             type: "raster",
             source: "osm",
-            paint: {
-              "raster-brightness-max": 1.0,
-              "raster-saturation": 0,
-              "raster-contrast": 0,
-            },
+            paint: DARK_PAINT,
           },
         ],
       },
       center: [85.324, 27.7172],
-      zoom: 10,
+      zoom: 11,
       pitch: 0,
+      attributionControl: false,
     });
 
     map.current.addControl(new maplibregl.NavigationControl(), "top-right");
@@ -231,6 +286,36 @@ export default function MapView({
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
+
+      {/* Map Mode toggle */}
+      <div
+        className="absolute top-2 left-2 z-10 flex rounded-lg overflow-hidden border shadow-lg"
+        style={{
+          background: "var(--bg-card)",
+          borderColor: "var(--border-subtle)",
+        }}
+      >
+        <button
+          onClick={() => switchMode("dark")}
+          className="px-3 py-1.5 text-[11px] font-semibold transition-colors flex items-center gap-1.5"
+          style={{
+            background: mapMode === "dark" ? "var(--accent-blue)" : "transparent",
+            color: mapMode === "dark" ? "white" : "var(--text-secondary)",
+          }}
+        >
+          <span>🌙</span> Dark Map
+        </button>
+        <button
+          onClick={() => switchMode("satellite")}
+          className="px-3 py-1.5 text-[11px] font-semibold transition-colors flex items-center gap-1.5"
+          style={{
+            background: mapMode === "satellite" ? "var(--accent-blue)" : "transparent",
+            color: mapMode === "satellite" ? "white" : "var(--text-secondary)",
+          }}
+        >
+          <span>🛰️</span> Satellite
+        </button>
+      </div>
     </div>
   );
 }

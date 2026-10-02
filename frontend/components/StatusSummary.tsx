@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { Incident, Responder } from "@/lib/api";
+import { resetResponders } from "@/lib/api";
 
 interface StatusSummaryProps {
   incidents: Incident[];
@@ -58,6 +60,24 @@ function MapPin({ className = "w-3.5 h-3.5" }: { className?: string }) {
 }
 
 export default function StatusSummary({ incidents, responders }: StatusSummaryProps) {
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+
+  const handleReset = async () => {
+    setResetting(true);
+    setResetMsg(null);
+    try {
+      const r = await resetResponders();
+      setResetMsg(`${r.reset} reset`);
+      setTimeout(() => setResetMsg(null), 3000);
+    } catch {
+      setResetMsg("failed");
+      setTimeout(() => setResetMsg(null), 3000);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const counts = { P1: 0, P2: 0, P3: 0, P4: 0 };
   incidents.forEach((inc) => {
     counts[inc.severity as keyof typeof counts]++;
@@ -124,11 +144,35 @@ export default function StatusSummary({ incidents, responders }: StatusSummaryPr
         </div>
       </div>
 
-      {/* Right side: total */}
+      {/* Right side: total + reset */}
       <div className="ml-auto flex items-center gap-2">
         <span className="text-[10px] px-2 py-0.5 rounded-full border" style={{ color: "var(--text-muted)", borderColor: "var(--border-subtle)" }}>
           {incidents.length} total
         </span>
+        <div className="h-5 w-px" style={{ background: "var(--border-subtle)" }} />
+        <button
+          onClick={handleReset}
+          disabled={resetting}
+          title="Reset all responders to available (demo)"
+          className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-lg border transition-all duration-150 disabled:opacity-50"
+          style={{
+            borderColor: resetting ? "var(--border-subtle)" : "rgba(234,179,8,0.4)",
+            color: resetting ? "var(--text-muted)" : "#fbbf24",
+            background: "transparent",
+          }}
+        >
+          {resetting ? (
+            <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 12a9 9 0 11-6.219-8.56" />
+            </svg>
+          ) : (
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 .49-4" />
+            </svg>
+          )}
+          {resetMsg ?? "Reset Responders"}
+        </button>
       </div>
     </div>
   );

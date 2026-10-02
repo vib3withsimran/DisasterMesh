@@ -37,7 +37,7 @@
         "confidence": 0.92,
         "satellite": "Sentinel-2A",
         "band": "NDWI",
-        "timestamp": "2026-08-08T06:06:57.871653+00:00"
+        "timestamp": "2026-10-02T14:28:24.705431+00:00"
       }
     },
     {
@@ -76,7 +76,7 @@
         "confidence": 0.88,
         "satellite": "Sentinel-2B",
         "band": "NDWI",
-        "timestamp": "2026-08-08T05:06:57.871666+00:00"
+        "timestamp": "2026-10-02T13:28:24.705434+00:00"
       }
     },
     {
@@ -115,7 +115,7 @@
         "confidence": 0.79,
         "satellite": "Sentinel-2A",
         "band": "NDWI",
-        "timestamp": "2026-08-08T04:06:57.871671+00:00"
+        "timestamp": "2026-10-02T12:28:24.705435+00:00"
       }
     },
     {
@@ -154,7 +154,7 @@
         "confidence": 0.83,
         "satellite": "Sentinel-2B",
         "band": "NDWI",
-        "timestamp": "2026-08-08T03:06:57.871674+00:00"
+        "timestamp": "2026-10-02T11:28:24.705437+00:00"
       }
     },
     {
@@ -193,7 +193,7 @@
         "confidence": 0.91,
         "satellite": "Sentinel-2A",
         "band": "NDWI",
-        "timestamp": "2026-08-08T02:06:57.871678+00:00"
+        "timestamp": "2026-10-02T10:28:24.705438+00:00"
       }
     }
   ]
