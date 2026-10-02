@@ -1,16 +1,16 @@
 # Graph Report - DisasterMesh  (2026-10-02)
 
 ## Corpus Check
-- 84 files · ~50,185 words
+- 85 files · ~51,281 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1172 nodes · 2143 edges · 70 communities (57 shown, 13 thin omitted)
-- Extraction: 82% EXTRACTED · 18% INFERRED · 0% AMBIGUOUS · INFERRED: 389 edges (avg confidence: 0.71)
+- 1195 nodes · 2190 edges · 74 communities (61 shown, 13 thin omitted)
+- Extraction: 82% EXTRACTED · 18% INFERRED · 0% AMBIGUOUS · INFERRED: 401 edges (avg confidence: 0.71)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `596ab5de`
+- Built from commit: `02b2df39`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -78,6 +78,10 @@
 - __init__.py
 - __main__.py
 - next.config.js
+- _polygon_centroid
+- .ingest
+- .process_citizen_report
+- .search_nearby
 
 ## God Nodes (most connected - your core abstractions)
 1. `VictimAgent` - 57 edges
@@ -106,39 +110,39 @@
 ## Import Cycles
 - None detected.
 
-## Communities (70 total, 13 thin omitted)
+## Communities (74 total, 13 thin omitted)
 
 ### Community 0 - "🌐 DisasterMesh"
 Cohesion: 0.06
-Nodes (30): 1️⃣ Situational Agent — Intake & Fusion, 1. Start the backend, 2. Launch the TUI dashboard (terminal), 2️⃣ Verification Agent — Dedup & Confidence, 3. Launch the web frontend (browser), 3️⃣ Victim Agent — Needs & Severity, 4️⃣ Resource Agent — Responder State, 5️⃣ Orchestrator Agent — Optimization & Dispatch (+22 more)
+Nodes (31): 1. Backend, 1️⃣ Situational Agent — Intake & Fusion, 2. Seed demo data, 2️⃣ Verification Agent — Dedup & Confidence, 3. TUI dashboard, 3️⃣ Victim Agent — Needs & Severity, 4️⃣ Resource Agent — Responder State, 4. Web frontend (+23 more)
 
 ### Community 1 - "🏗️ Architecture"
 Cohesion: 0.25
 Nodes (20): _banner(), _c(), _err(), _get(), _info(), main(), _narration(), _ok() (+12 more)
 
 ### Community 5 - "📦 Data schema"
-Cohesion: 0.08
-Nodes (31): Normalizes all incoming data streams into ProtoIncident objects., Geocode (if needed), detect language, normalize to ProtoIncident., Normalize a social media post into a ProtoIncident., Extract the centroid of a GeoJSON polygon and normalise to a ProtoIncident., Normalize an IoT sensor reading into a ProtoIncident.          Applies threshold, Resolve an address string to (lat, lon).          Strategy:           1. Landmar, Helper to build a ProtoIncident from raw attributes and normalize it.          S, Idempotently store a proto incident (used by retry-queue fallback path). (+23 more)
+Cohesion: 0.09
+Nodes (26): Normalizes all incoming data streams into ProtoIncident objects., Geocode (if needed), detect language, normalize to ProtoIncident., Normalize a social media post into a ProtoIncident., Extract the centroid of a GeoJSON polygon and normalise to a ProtoIncident., Normalize an IoT sensor reading into a ProtoIncident.          Applies threshold, Resolve an address string to (lat, lon).          Strategy:           1. Landmar, Helper to build a ProtoIncident from raw attributes and normalize it.          S, SituationalAgent (+18 more)
 
 ### Community 6 - "VerifiedIncident"
-Cohesion: 0.14
-Nodes (26): Fetch a single responder by id; returns None if not found., Update a responder's GPS position.          Returns the updated Responder, or No, Score how well *responder* matches the incident's required capabilities., Tracks and queries the live responder registry.      All mutations are committed, ResourceAgent, LocationUpdate, Full responder representation — used by Resource Agent and API responses., Request body for ``POST /responders``. (+18 more)
+Cohesion: 0.16
+Nodes (24): Update a responder's operational status.          When transitioning back to 'av, Score how well *responder* matches the incident's required capabilities., Tracks and queries the live responder registry.      All mutations are committed, Create a new responder entry in the registry.          Returns the full Responde, ResourceAgent, Full responder representation — used by Resource Agent and API responses., Request body for ``POST /responders``., Request body for ``PUT /responders/{id}/status``. (+16 more)
 
 ### Community 7 - "schemas.py"
-Cohesion: 0.10
-Nodes (25): get_intake_queue(), IntakeQueue, Any, Intake Queue — Redis-backed retry queue for pending LLM intake parsing tasks (Ph, Return the shared IntakeQueue singleton., Queue for retrying failed LLM intake parsing requests., Get or create persistent Redis client., Close the Redis client. (+17 more)
+Cohesion: 0.19
+Nodes (17): AuditLog, Immutable append-only audit trail — captures who/what/when for every     signifi, _index_in_vector_store(), ingest_citizen_report(), ingest_satellite_polygon(), ingest_sensor_stream(), ingest_social_post(), _persist() (+9 more)
 
 ### Community 8 - "CommunicationAgent"
-Cohesion: 0.07
-Nodes (29): App, DisasterMeshTUI, IncidentDetail, IncidentSummary, main(), Any, DisasterMesh TUI Dashboard -- terminal-based live incident monitoring.  Run the, DisasterMesh terminal dashboard -- live incident monitoring. (+21 more)
+Cohesion: 0.06
+Nodes (33): App, DisasterMeshTUI, IncidentDetail, IncidentSummary, main(), Any, DisasterMesh TUI Dashboard -- terminal-based live incident monitoring.  Run the, DisasterMesh terminal dashboard -- live incident monitoring. (+25 more)
 
 ### Community 9 - "VerificationAgent"
-Cohesion: 0.15
-Nodes (20): OrchestratorAgent, Dispatch optimizer.      Uses a LangGraph StateGraph to manage the dispatch work, Run the LangGraph dispatch pipeline for *incident*.          Parameters, Batch multi-incident dispatch.          Runs the full LangGraph pipeline for eac, Convert a NeedsProfile to the capability dict expected by the solver.          `, Main entry point: verify + deduplicate a proto-incident.          Steps, Create a lone (single-member) cluster for a proto-incident that cannot         p, NeedsProfile (+12 more)
+Cohesion: 0.14
+Nodes (23): OrchestratorAgent, Dispatch optimizer.      Uses a LangGraph StateGraph to manage the dispatch work, Run the LangGraph dispatch pipeline for *incident*.          Parameters, Batch multi-incident dispatch.          Runs the full LangGraph pipeline for eac, Convert a NeedsProfile to the capability dict expected by the solver.          `, _get_verified_incident(), Fetch a ``VerifiedIncident`` from the Qdrant vector store.      Raises     -----, NeedsProfile (+15 more)
 
 ### Community 10 - "seed_data.py"
-Cohesion: 0.20
-Nodes (16): _jitter(), Seed script — populates demo_data/ with realistic mock records.  Usage:     cd b, Add small random noise to a coordinate so nearby reports aren't identical., Generate 25 realistic Hindi/English SMS-style citizen reports., Generate 20 realistic tweet-style social media posts., Generate 5 Sentinel-2 flood GeoJSON polygons., Generate 10 IoT sensor readings (water level + air quality)., Generate 8 mock responder teams with diverse capabilities. (+8 more)
+Cohesion: 0.17
+Nodes (18): _jitter(), Seed script — populates demo_data/ with realistic mock records.  Usage:     cd b, Add small random noise to a coordinate so nearby reports aren't identical., Generate 25 realistic Hindi/English SMS-style citizen reports., Generate 20 realistic tweet-style social media posts., Generate 5 Sentinel-2 flood GeoJSON polygons., Generate 10 IoT sensor readings (water level + air quality)., Generate 8 mock responder teams with diverse capabilities. (+10 more)
 
 ### Community 12 - "test_ingest.py"
 Cohesion: 0.12
@@ -149,11 +153,11 @@ Cohesion: 0.07
 Nodes (31): get_intake_parser(), IntakeParserAgent, IntakeParsingError, Any, Intake Parser Agent — LLM Smart Intake Layer (Phase 4.5).  Uses LangChain's Chat, Parse raw unstructured text using Groq LLM via LangChain.          Retries trans, Return the shared IntakeParserAgent singleton., Raised when the intake parser cannot produce a ParsedIntake after retries. (+23 more)
 
 ### Community 14 - "incidents.py"
-Cohesion: 0.09
-Nodes (19): get_verification_agent(), Any, datetime, Verification Agent — Agent 2.  Responsibilities:   - Deduplicate reports using s, Determine which cluster to join (or create a new one).          Collect cluster_, Confidence = corroboration_factor × cross_source_bonus × stale_penalty, Choose the most authoritative / recent representative.          Priority order:, Return the shared VerificationAgent singleton. (+11 more)
+Cohesion: 0.16
+Nodes (15): Any, Main entry point: verify + deduplicate a proto-incident.          Steps, Determine which cluster to join (or create a new one).          Collect cluster_, Confidence = corroboration_factor × cross_source_bonus × stale_penalty, Choose the most authoritative / recent representative.          Priority order:, Create a lone (single-member) cluster for a proto-incident that cannot         p, Deduplicates and verifies proto-incidents.      Uses three-dimensional clusterin, VerificationAgent (+7 more)
 
 ### Community 22 - "SatellitePolygonInput"
-Cohesion: 0.19
+Cohesion: 0.17
 Nodes (14): get_orchestrator_agent(), AsyncSession, Return an OrchestratorAgent bound to *db* (a per-request AsyncSession)., BatchDispatchRequest, dispatch_incident(), _fetch_incident(), optimize_batch(), AsyncSession (+6 more)
 
 ### Community 23 - "SensorStreamInput"
@@ -161,20 +165,20 @@ Cohesion: 0.15
 Nodes (18): _assess_body(), Integration tests for the VictimAgent assess endpoint — Phase 4.  Tests the full, Medical + rescue text in Delhi high-density zone → P1 or P2., Empty text → all needs=False, so base_needs_score=0.     Formula: (0 + 1.0 + pop, Response body must include all 6 scoring-factor keys., 3-source cluster should score higher than a 1-source cluster (same text)., Including satellite in provenance triggers the satellite_area factor., Valid request → 200 with well-formed SeverityAssessment JSON. (+10 more)
 
 ### Community 24 - "SocialPostInput"
-Cohesion: 0.20
-Nodes (11): LangChain-based vector store backed by Qdrant.      Wraps QdrantVectorStore for, Return the payload dict for the *verified* point with the given cluster_id., Return the payload dict for a verified incident cluster.          Thin alias for, VectorStore, memory_vector_store(), Integration tests for VectorStore with Qdrant — Phase 2.  Uses an in-memory Qdra, Create a fresh in-memory VectorStore for each test., test_ensure_collection_is_idempotent() (+3 more)
+Cohesion: 0.29
+Nodes (9): LangChain-based vector store backed by Qdrant.      Wraps QdrantVectorStore for, VectorStore, memory_vector_store(), Integration tests for VectorStore with Qdrant — Phase 2.  Uses an in-memory Qdra, Create a fresh in-memory VectorStore for each test., test_ensure_collection_is_idempotent(), test_search_nearby_geo_radius(), test_search_similar() (+1 more)
 
 ### Community 25 - "AsyncSession"
 Cohesion: 0.05
 Nodes (64): get_victim_agent(), _in_bbox(), Victim Agent — Agent 3.  Responsibilities:   - Extract needs (medical, shelter,, Return the shared VictimAgent singleton., Return True if (lat, lon) falls inside *bbox*., Extracts needs and computes severity for verified incidents., Assess needs and severity for a verified incident cluster.          Parameters, Fast bilingual keyword-based needs extraction. (+56 more)
 
 ### Community 26 - "CommunicationAgent"
-Cohesion: 0.09
-Nodes (25): Integration tests for the Communication Agent REST & WebSocket APIs — Phase 6., REPORTED → RESOLVED (skipping states) must return 422., Status transition for a non-existent cluster must return 404., When citizen_phone is provided, a CommunicationLog row must be written., GET /incidents/{id}/summary must return a valid SituationalSummary., human_summary must be a non-empty string containing key identifiers., GET /communications/logs?incident_id=unused should return []., After a citizen SMS is triggered, the log entry must be queryable. (+17 more)
+Cohesion: 0.06
+Nodes (31): AsyncClient, async_client(), Integration tests for the Communication Agent REST & WebSocket APIs — Phase 6., REPORTED → RESOLVED (skipping states) must return 422., Status transition for a non-existent cluster must return 404., When citizen_phone is provided, a CommunicationLog row must be written., GET /incidents/{id}/summary must return a valid SituationalSummary., human_summary must be a non-empty string containing key identifiers. (+23 more)
 
 ### Community 27 - "test_schemas.py"
-Cohesion: 0.20
-Nodes (8): Communication Agent — Agent 6.  Responsibilities:   - Enforce the incident lifec, AuditLog, Base, DispatchRecord, SQLAlchemy ORM models for DisasterMesh.  Tables ------ raw_ingestion_records  —, Immutable record of each assignment made by the Orchestrator Agent.      Created, Immutable append-only audit trail — captures who/what/when for every     signifi, DeclarativeBase
+Cohesion: 0.17
+Nodes (12): get_vector_store(), Return the shared VectorStore singleton (initialised in main.py lifespan)., 5 overlapping SMS reports about the Yamuna Bazar flood are ingested via     POST, A Sentinel-2 GeoJSON polygon and 3 SMS reports are ingested.     All 4 should la, An IoT water-level reading above the 3.0 m alert threshold is ingested     via P, test_citizen_sms_deduplication_pipeline(), test_iot_sensor_alert_pipeline(), test_satellite_plus_citizen_cross_source_boost() (+4 more)
 
 ### Community 28 - "AsyncSession"
 Cohesion: 0.07
@@ -182,51 +186,51 @@ Nodes (46): Step-function penalty based on how old the proto-incident timestamp 
 
 ### Community 29 - "test_verification_integration.py"
 Cohesion: 0.10
-Nodes (29): Cosine similarity between two vectors.          Since normalize_embeddings=True,, embedding_service(), _ingest(), _now(), _proto(), datetime, Integration tests for VerificationAgent — Phase 3.  Uses an in-memory Qdrant ins, A satellite + 3× SMS cluster should have higher confidence than an     SMS-only (+21 more)
+Nodes (30): Cosine similarity between two vectors.          Since normalize_embeddings=True,, agent(), embedding_service(), _ingest(), _now(), _proto(), datetime, Integration tests for VerificationAgent — Phase 3.  Uses an in-memory Qdrant ins (+22 more)
 
 ### Community 30 - ".verify"
-Cohesion: 0.21
-Nodes (7): ConnectionManager, Any, Real-time WebSocket endpoint for incident lifecycle updates.      Clients connec, Tracks all live WebSocket connections.      Thread-safety note: FastAPI runs in, Send *payload* as JSON to every connected client, evicting dead sockets., websocket_updates(), WebSocket
+Cohesion: 0.29
+Nodes (10): derive_confidence(), derive_needs_from_text(), derive_severity(), normalize_incident_dict(), Any, DisasterMesh Incident Utilities -- Canonical normalization for incidents.  Ensur, Extract boolean need flags from raw text using bilingual keyword matching., Return explicit confidence if present in raw payload.     Otherwise, derive a re (+2 more)
 
 ### Community 31 - ".upsert"
-Cohesion: 0.10
-Nodes (24): Generate a structured, human-readable situational summary for incident         c, assess_incident(), Run the VictimAgent needs-extraction and multi-factor severity scoring     pipel, AssessRequest, AssignedResponderSummary, Assignment, CommLogEntry, DispatchResult (+16 more)
+Cohesion: 0.11
+Nodes (23): assess_incident(), Run the VictimAgent needs-extraction and multi-factor severity scoring     pipel, AssessRequest, AssignedResponderSummary, Assignment, CommLogEntry, DispatchResult, HealthResponse (+15 more)
 
 ### Community 32 - "get_resource_agent"
-Cohesion: 0.18
-Nodes (15): get_resource_agent(), AsyncSession, Return a ResourceAgent bound to *db* (a per-request AsyncSession)., create_responder(), get_responder(), list_responders(), AsyncSession, Responders router — CRUD for the live responder registry (Phase 5). (+7 more)
+Cohesion: 0.16
+Nodes (17): get_resource_agent(), AsyncSession, Return a ResourceAgent bound to *db* (a per-request AsyncSession)., create_responder(), get_responder(), list_responders(), AsyncSession, Responders router — CRUD for the live responder registry (Phase 5). (+9 more)
 
 ### Community 33 - "vector_store.py"
-Cohesion: 0.22
-Nodes (7): init_vector_store(), QdrantClient, Create the Qdrant collection if it doesn't exist, then bind         the LangChai, Initialise the VectorStore singleton and ensure the Qdrant collection exists., memory_vector_store(), Initialize an in-memory VectorStore for tests., QdrantVectorStore
+Cohesion: 0.13
+Nodes (11): get_intake_queue(), IntakeQueue, Any, Intake Queue — Redis-backed retry queue for pending LLM intake parsing tasks (Ph, Return the shared IntakeQueue singleton., Queue for retrying failed LLM intake parsing requests., Get or create persistent Redis client., Close the Redis client. (+3 more)
 
 ### Community 34 - "TestNotificationMockMode"
-Cohesion: 0.11
-Nodes (13): CommunicationLog, Audit log of every outbound message dispatched by the CommunicationAgent.      A, Triggering a lifecycle transition that includes citizen_phone must write     ≥ 1, test_communication_log_written_for_full_pipeline(), _make_assignment(), Unit tests for CommunicationAgent — Phase 6.  All tests are fully mocked — no da, Verify notification dispatch works in demo mode (no Twilio credentials)., notify_responder_assignment returns True in mock mode. (+5 more)
+Cohesion: 0.13
+Nodes (11): CommunicationLog, Audit log of every outbound message dispatched by the CommunicationAgent.      A, _make_assignment(), Unit tests for CommunicationAgent — Phase 6.  All tests are fully mocked — no da, Verify notification dispatch works in demo mode (no Twilio credentials)., notify_responder_assignment returns True in mock mode., Assignment notification body must include ETA, severity, and coords., notify_citizen_status returns True in mock mode. (+3 more)
 
 ### Community 35 - "_record_to_schema"
-Cohesion: 0.13
-Nodes (14): _haversine_m(), Resource Agent — Agent 4.  Responsibilities:   - Maintain live responder registr, Return all responders, optionally filtered by status., Update a responder's operational status.          When transitioning back to 'av, Return responders that are available within *radius_m* metres of the incident,, Great-circle distance in metres between two lat/lon points., Convert an ORM row to the Pydantic Responder schema., Create a new responder entry in the registry.          Returns the full Responde (+6 more)
+Cohesion: 0.08
+Nodes (24): Generate a structured, human-readable situational summary for incident         c, _haversine_m(), Resource Agent — Agent 4.  Responsibilities:   - Maintain live responder registr, Return all responders, optionally filtered by status., Fetch a single responder by id; returns None if not found., Update a responder's GPS position.          Returns the updated Responder, or No, Return responders that are available within *radius_m* metres of the incident,, Great-circle distance in metres between two lat/lon points. (+16 more)
 
 ### Community 36 - "get_settings"
-Cohesion: 0.06
-Nodes (40): async_sessionmaker, AsyncQdrantClient, API Authentication Module.  Provides secure API key verification for DisasterMes, Verify that the provided API key is valid.      Parameters     ----------     ap, verify_api_key(), get_settings(), DisasterMesh backend — application settings.  Loaded from environment variables, Return cached settings singleton. (+32 more)
+Cohesion: 0.18
+Nodes (11): AsyncQdrantClient, get_settings(), Return cached settings singleton., get_qdrant_client(), get_qdrant_client_sync(), get_redis_client(), QdrantClient, Return a cached Qdrant client.      - QDRANT_URL is set  → connect to cloud / se (+3 more)
 
 ### Community 37 - "init_vector_store"
-Cohesion: 0.17
-Nodes (9): _extract_vector(), _haversine_m(), Any, Vector Store — Phase 2.  Uses LangChain's QdrantVectorStore wrapper so both the, Normalize a Qdrant point's `.vector` field into a plain list[float].      Handle, Find ProtoIncident payloads (and optional vectors) within geo radius + optional, Fetch a payload by proto_id., Return ``(payload, vector)`` for every point whose ``proto_id`` payload (+1 more)
+Cohesion: 0.20
+Nodes (7): _extract_vector(), Any, Normalize a Qdrant point's `.vector` field into a plain list[float].      Handle, Fetch a payload by proto_id., Return the payload dict for the *verified* point with the given cluster_id., Return ``(payload, vector)`` for every point whose ``proto_id`` payload, Return the payload dict for a verified incident cluster.          Thin alias for
 
 ### Community 38 - "TestStateMachine"
 Cohesion: 0.14
 Nodes (8): _make_incident(), Walk the entire happy path in one test., Skipping states must raise ValueError., RESOLVED → anything must raise ValueError., Every IncidentStatus must have an entry in VALID_TRANSITIONS., transition() must return the same object (mutated), not a copy., Verify the lifecycle transition guard., TestStateMachine
 
 ### Community 39 - ".search_nearby"
-Cohesion: 0.17
-Nodes (8): _make_ws(), Unit tests for the WebSocket ConnectionManager — Phase 6.  Tests cover:   - conn, Repeated connect/disconnect cycles must keep the set consistent., Return a mock WebSocket with async accept / send_json / receive_text., Disconnecting a socket that was never connected must not raise., A client that raises on send_json must be removed from the active set., Broadcasting with no clients must not raise., TestConnectionManager
+Cohesion: 0.07
+Nodes (23): ConnectionManager, get_communication_logs(), get_situational_summary(), Any, AsyncSession, Communication router — Phase 6.  Endpoints --------- POST /incidents/{cluster_id, Advance the incident lifecycle state machine.      Valid transitions:     ``REPO, Generate and return a structured situational summary for incident commanders. (+15 more)
 
 ### Community 40 - "main.py"
-Cohesion: 0.12
-Nodes (15): CommunicationAgent, Any, AsyncSession, Notify a responder that they have been assigned to *incident*.          Sends an, Send a status-update SMS to the citizen who filed the report.          Parameter, Send *body* to *to_number* via Vonage, Twilio, or mock mode.          Priority:, Send SMS via Vonage Messages API (free tier: 200 SMS/month)., Send SMS/WhatsApp via Twilio REST API. (+7 more)
+Cohesion: 0.15
+Nodes (9): Any, AsyncSession, Notify a responder that they have been assigned to *incident*.          Sends an, Send a status-update SMS to the citizen who filed the report.          Parameter, Send *body* to *to_number* via Vonage, Twilio, or mock mode.          Priority:, Send SMS via Vonage Messages API (free tier: 200 SMS/month)., Send SMS/WhatsApp via Twilio REST API., Return a comma-separated human-readable needs string. (+1 more)
 
 ### Community 41 - "embeddings.py"
 Cohesion: 0.15
@@ -245,8 +249,8 @@ Cohesion: 0.09
 Nodes (22): ExaMonitor, feed_exa_to_pipeline(), one_shot(), Any, Exa Social Media Monitor — DisasterMesh ========================================, Rotate through disaster queries., Search Exa for disaster-related posts.          Parameters         ----------, Normalize an Exa result into our standard format. (+14 more)
 
 ### Community 45 - "conftest.py"
-Cohesion: 0.08
-Nodes (16): DashboardPage(), MapView, EVENT_ICONS, EventFeedProps, STATUS_COLORS, IncidentCardProps, PRIORITY_STYLES, SOURCE_LABELS (+8 more)
+Cohesion: 0.07
+Nodes (15): DashboardPage(), MapView, EVENT_ICONS, EventFeedProps, STATUS_COLORS, IncidentCardProps, PRIORITY_STYLES, SOURCE_LABELS (+7 more)
 
 ### Community 46 - "get_embedding_service"
 Cohesion: 0.33
@@ -254,7 +258,7 @@ Nodes (8): get_embedding_service(), Return the shared EmbeddingService singleton
 
 ### Community 47 - "SourceType"
 Cohesion: 0.18
-Nodes (11): End-to-End Pipeline Integration Tests — Phase 7.  Validates the complete Disaste, 5 overlapping SMS reports about the Yamuna Bazar flood are ingested via     POST, A P1 VerifiedIncident with medical+rescue needs must receive ≥ 2     responders, Walk the complete 5-step lifecycle via POST /incidents/{id}/status and     asser, A WebSocket client connected before status transitions begin must receive     'l, Register *count* diverse responder teams. Returns list of IDs., _seed_responders(), test_citizen_sms_deduplication_pipeline() (+3 more)
+Nodes (14): Priority, End-to-End Pipeline Integration Tests — Phase 7.  Validates the complete Disaste, A P1 VerifiedIncident with medical+rescue needs must receive ≥ 2     responders, Walk the complete 5-step lifecycle via POST /incidents/{id}/status and     asser, A WebSocket client connected before status transitions begin must receive     'l, Triggering a lifecycle transition that includes citizen_phone must write     ≥ 1, Embed and upsert a VerifiedIncident into the in-memory Qdrant store., Register *count* diverse responder teams. Returns list of IDs. (+6 more)
 
 ### Community 48 - "conftest.py"
 Cohesion: 0.07
@@ -265,48 +269,64 @@ Cohesion: 0.25
 Nodes (3): Unit tests for the ingest endpoints.  Run:     cd backend     pytest app/tests/u, Accepts report with address but no lat/lon., test_ingest_citizen_report_address_only()
 
 ### Community 52 - "get_qdrant_client"
-Cohesion: 0.14
-Nodes (12): _cluster_id_to_point_id(), _proto_to_document(), Derive a stable integer point ID from a cluster_id string     (form: "cluster_<u, Convert a ProtoIncident to a LangChain Document.      page_content  = the text u, Store a ProtoIncident and its pre-computed embedding in Qdrant., Semantic similarity search using LangChain interface.          Returns list of (, Return the total number of points in the collection., Persist a :class:`~app.schemas.VerifiedIncident` back into the Qdrant         co (+4 more)
+Cohesion: 0.13
+Nodes (14): _cluster_id_to_point_id(), _haversine_m(), Vector Store — Phase 2.  Uses LangChain's QdrantVectorStore wrapper so both the, Derive a stable integer point ID from a cluster_id string     (form: "cluster_<u, Store a ProtoIncident and its pre-computed embedding in Qdrant., Find ProtoIncident payloads (and optional vectors) within geo radius + optional, Return the total number of points in the collection., Persist a :class:`~app.schemas.VerifiedIncident` back into the Qdrant         co (+6 more)
 
 ### Community 53 - "communication.py"
-Cohesion: 0.21
-Nodes (11): get_communication_agent(), Return the shared ``CommunicationAgent`` singleton., get_communication_logs(), get_situational_summary(), AsyncSession, Communication router — Phase 6.  Endpoints --------- POST /incidents/{cluster_id, Advance the incident lifecycle state machine.      Valid transitions:     ``REPO, Generate and return a structured situational summary for incident commanders. (+3 more)
+Cohesion: 0.18
+Nodes (11): CommunicationAgent, get_communication_agent(), Communication Agent — Agent 6.  Responsibilities:   - Enforce the incident lifec, Apply a lifecycle state transition to *incident* (in-place).          Parameters, Return the shared ``CommunicationAgent`` singleton., Handles notifications and incident lifecycle transitions.      The agent is inte, IncidentStatus, Verify the structured summary generator. (+3 more)
 
 ### Community 54 - "get_vector_store"
-Cohesion: 0.18
-Nodes (9): get_vector_store(), Return the shared VectorStore singleton (initialised in main.py lifespan)., Integration tests for Dispatch & Responders REST APIs — Phase 5.  Validates:   -, test_dispatch_batch_optimize(), test_dispatch_cluster_flow(), A Sentinel-2 GeoJSON polygon and 3 SMS reports are ingested.     All 4 should la, An IoT water-level reading above the 3.0 m alert threshold is ingested     via P, test_iot_sensor_alert_pipeline() (+1 more)
+Cohesion: 0.25
+Nodes (6): API Authentication Module.  Provides secure API key verification for DisasterMes, Verify that the provided API key is valid.      Parameters     ----------     ap, verify_api_key(), health(), Returns 200 when the API is up. Used by CI and load balancers., FastAPI
 
 ### Community 55 - "SourceType"
-Cohesion: 0.29
-Nodes (9): Apply a lifecycle state transition to *incident* (in-place).          Parameters, _get_verified_incident(), Fetch a ``VerifiedIncident`` from the Qdrant vector store.      Raises     -----, IncidentStatus, Priority, SourceType, Embed and upsert a VerifiedIncident into the in-memory Qdrant store., _seed_verified_incident() (+1 more)
+Cohesion: 0.24
+Nodes (10): get_incident(), query_incidents(), Fetch a proto incident by ID from Qdrant vector store., Return incidents within `radius` metres of (lat, lon).      Returns verified inc, Transform a raw Qdrant payload into the frontend Incident interface.      Uses c, Search incidents by semantic similarity using LangChain embeddings & Qdrant., Run the VerificationAgent 3D clustering & deduplication pipeline on a ProtoIncid, search_incidents_semantic() (+2 more)
 
 ### Community 56 - "MapView.tsx"
 Cohesion: 0.24
 Nodes (9): createIncidentMarker(), createResponderMarker(), DARK_PAINT, MapView(), MapViewProps, NORMAL_PAINT, PRIORITY_COLORS, STATUS_COLORS (+1 more)
 
 ### Community 57 - "._haversine"
-Cohesion: 0.22
-Nodes (8): Distance in metres between two lat/lon points (great-circle)., Delhi (28.6139, 77.2090) → Agra (27.1767, 78.0081) ≈ 178 km ±10%., A point displaced ~140 m north should be within the 150 m window., A point displaced ~200 m north should be outside the 150 m window., test_haversine_boundary_150m_accepted(), test_haversine_boundary_151m_rejected(), test_haversine_known_distance(), test_haversine_zero()
+Cohesion: 0.17
+Nodes (10): async_sessionmaker, db_session(), patch_get_db(), patch_init_db(), Root conftest.py for all tests (unit and integration).  Provides an in-memory SQ, Create all tables in an in-memory SQLite DB once per test session., Yield a fresh async session, rolling back after each test., Replace the FastAPI `get_db` dependency with one that returns the     test sessi (+2 more)
 
 ### Community 58 - "incidents.py"
-Cohesion: 0.31
-Nodes (8): get_incident(), query_incidents(), Fetch a proto incident by ID from Qdrant vector store., Return incidents within `radius` metres of (lat, lon).      Returns verified inc, Transform a raw Qdrant payload into the frontend Incident interface.      Handle, Search incidents by semantic similarity using LangChain embeddings & Qdrant., search_incidents_semantic(), _transform_incident()
+Cohesion: 0.33
+Nodes (8): get_db(), _get_engine(), _get_session_factory(), init_db(), AsyncSession, Database and service client factories.  Qdrant:      local file mode by default, Create all ORM tables on startup (idempotent).      Called once from the FastAPI, FastAPI dependency — yields an async DB session per request.      Usage in a rou
 
 ### Community 59 - "test_schemas.py"
 Cohesion: 0.25
 Nodes (7): Unit tests for Pydantic schemas.  Validates that models accept valid input and r, Address without lat/lon should be accepted (geocoded later)., Smoke-test the state machine transition table., test_citizen_report_input_address_only(), test_citizen_report_input_valid(), test_confidence_bounds(), test_lifecycle_transition_map()
 
 ### Community 60 - "AsyncClient"
-Cohesion: 0.33
-Nodes (6): AsyncClient, async_client(), async_client(), async_client(), ASGI test client — reuses the in-memory fixtures from conftest.py., async_client()
+Cohesion: 0.22
+Nodes (7): init_vector_store(), QdrantClient, Create the Qdrant collection if it doesn't exist, then bind         the LangChai, Initialise the VectorStore singleton and ensure the Qdrant collection exists., memory_vector_store(), Initialize an in-memory VectorStore for tests., QdrantVectorStore
 
 ### Community 61 - "test_qdrant_vector_search_latency"
-Cohesion: 0.33
-Nodes (6): Convert a UUID string to an integer suitable as a Qdrant point ID., _uuid_to_int(), _dummy_vec(), Pre-load 1 000 ProtoIncidents (with dummy pre-computed vectors to avoid     embe, Deterministic unit-ish vector; avoids real embedding for bulk loads., test_qdrant_vector_search_latency()
+Cohesion: 0.22
+Nodes (8): Distance in metres between two lat/lon points (great-circle)., Delhi (28.6139, 77.2090) → Agra (27.1767, 78.0081) ≈ 178 km ±10%., A point displaced ~140 m north should be within the 150 m window., A point displaced ~200 m north should be outside the 150 m window., test_haversine_boundary_150m_accepted(), test_haversine_boundary_151m_rejected(), test_haversine_known_distance(), test_haversine_zero()
 
 ### Community 62 - "DisasterMesh Frontend"
 Cohesion: 0.40
 Nodes (4): DisasterMesh Frontend, Environment Variables, Features, Setup
+
+### Community 70 - "_polygon_centroid"
+Cohesion: 0.29
+Nodes (6): get_verification_agent(), datetime, Verification Agent — Agent 2.  Responsibilities:   - Deduplicate reports using s, Return the shared VerificationAgent singleton., Fetch a proto incident by ID from Qdrant vector store and run the     Verificati, verify_incident_by_id()
+
+### Community 71 - ".ingest"
+Cohesion: 0.40
+Nodes (3): Idempotently store a proto incident (used by retry-queue fallback path)., Persists the raw payload **and** the normalised ProtoIncident produced     by th, RawIngestionRecord
+
+### Community 72 - ".process_citizen_report"
+Cohesion: 0.29
+Nodes (4): DisasterMesh backend — application settings.  Loaded from environment variables, Settings, DisasterMesh FastAPI application entrypoint.  Run locally:     cd backend     uv, BaseSettings
+
+### Community 73 - ".search_nearby"
+Cohesion: 0.40
+Nodes (4): _proto_to_document(), Convert a ProtoIncident to a LangChain Document.      page_content  = the text u, Semantic similarity search using LangChain interface.          Returns list of (, Document
 
 ## Knowledge Gaps
 - **96 isolated node(s):** `inter`, `metadata`, `MapView`, `EVENT_ICONS`, `STATUS_COLORS` (+91 more)
@@ -316,12 +336,12 @@ Nodes (4): DisasterMesh Frontend, Environment Variables, Features, Setup
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `VerifiedIncident` connect `VerificationAgent` to `TestNotificationMockMode`, `_record_to_schema`, `VerifiedIncident`, `TestStateMachine`, `main.py`, `test_schemas.py`, `test_ingest.py`, `incidents.py`, `get_qdrant_client`, `SatellitePolygonInput`, `SourceType`, `SocialPostInput`, `AsyncSession`, `CommunicationAgent`, `get_vector_store`, `.verify`, `.upsert`?**
-  _High betweenness centrality (0.074) - this node is a cross-community bridge._
-- **Why does `NeedsProfile` connect `VerificationAgent` to `TestNotificationMockMode`, `VerifiedIncident`, `TestStateMachine`, `main.py`, `test_ingest.py`, `CitizenReportInput`, `incidents.py`, `SourceType`, `SatellitePolygonInput`, `SourceType`, `get_vector_store`, `AsyncSession`, `CommunicationAgent`, `.verify`, `.upsert`?**
+- **Why does `NeedsProfile` connect `VerificationAgent` to `TestNotificationMockMode`, `VerifiedIncident`, `.search_nearby`, `TestStateMachine`, `test_ingest.py`, `CitizenReportInput`, `incidents.py`, `SourceType`, `communication.py`, `SatellitePolygonInput`, `AsyncSession`, `.upsert`?**
   _High betweenness centrality (0.067) - this node is a cross-community bridge._
-- **Why does `VectorStore` connect `SocialPostInput` to `vector_store.py`, `init_vector_store`, `📦 Data schema`, `embeddings.py`, `VerificationAgent`, `CitizenReportInput`, `incidents.py`, `get_qdrant_client`, `get_vector_store`, `SatellitePolygonInput`, `test_verification_integration.py`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
+- **Why does `VerifiedIncident` connect `VerificationAgent` to `VerifiedIncident`, `test_ingest.py`, `incidents.py`, `SatellitePolygonInput`, `SocialPostInput`, `AsyncSession`, `CommunicationAgent`, `.upsert`, `TestNotificationMockMode`, `_record_to_schema`, `TestStateMachine`, `.search_nearby`, `main.py`, `SourceType`, `get_qdrant_client`, `communication.py`, `SourceType`, `test_schemas.py`, `_polygon_centroid`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `VectorStore` connect `SocialPostInput` to `init_vector_store`, `embeddings.py`, `.search_nearby`, `VerificationAgent`, `CitizenReportInput`, `incidents.py`, `get_qdrant_client`, `SatellitePolygonInput`, `test_schemas.py`, `AsyncClient`, `test_verification_integration.py`?**
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `VictimAgent` (e.g. with `NeedsProfile` and `Priority`) actually correct?**
   _`VictimAgent` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 27 inferred relationships involving `VerifiedIncident` (e.g. with `CommunicationAgent` and `DispatchState`) actually correct?**

@@ -68,5 +68,9 @@
   "66": "next.config.js",
   "67": "__init__.py",
   "68": "postcss.config.js",
-  "69": "tailwind.config.js"
+  "69": "tailwind.config.js",
+  "70": "_polygon_centroid",
+  "71": ".ingest",
+  "72": ".process_citizen_report",
+  "73": ".search_nearby"
 }

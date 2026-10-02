@@ -118,48 +118,45 @@ async def _get_verified_incident(cluster_id: str) -> VerifiedIncident:
     vs = get_vector_store()
     payload = await vs.get_incident(cluster_id)
     if payload is None:
+        payload = await vs.get_by_proto_id(cluster_id)
+    if payload is None:
         raise HTTPException(
             status_code=404,
             detail=f"Incident '{cluster_id}' not found in vector store.",
         )
-    # Reconstruct a VerifiedIncident Pydantic model from the stored payload dict
     try:
-        ts_epoch = payload.get("timestamp_epoch")
-        if ts_epoch is not None:
-            ts = datetime.fromtimestamp(ts_epoch, tz=UTC)
-        elif "timestamp" in payload:
-            ts_val = payload["timestamp"]
-            ts = datetime.fromisoformat(ts_val) if isinstance(ts_val, str) else ts_val
-        else:
-            ts = datetime.now(UTC)
+        from app.incident_utils import normalize_incident_dict
 
-        needs_raw = payload.get("needs") or {}
-        cid = payload.get("cluster_id") or payload.get("proto_id") or payload.get("id") or cluster_id
+        norm = normalize_incident_dict(payload)
         sources = []
-        for s in payload.get("source_provenance", []):
+        for s in norm.get("source_provenance", []):
             try:
                 sources.append(SourceType(s))
-            except Exception:
+            except ValueError:
                 pass
         if not sources:
-            src = payload.get("source")
-            if src:
-                try:
-                    sources.append(SourceType(src))
-                except Exception:
-                    pass
+            sources = [SourceType.SMS]
+
+        ts_str = norm.get("timestamp")
+        ts = datetime.fromisoformat(ts_str) if ts_str else datetime.now(UTC)
+
+        status_val = norm.get("status", "REPORTED")
+        try:
+            status = IncidentStatus(status_val)
+        except ValueError:
+            status = IncidentStatus.REPORTED
 
         return VerifiedIncident(
-            cluster_id=cid,
+            cluster_id=norm["cluster_id"],
             source_provenance=sources,
-            lat=payload.get("lat") or 0.0,
-            lon=payload.get("lon") or 0.0,
+            lat=norm["lat"],
+            lon=norm["lon"],
             timestamp=ts,
-            confidence=payload.get("confidence", 0.5),
-            severity=Priority(payload.get("severity", "P4")),
-            needs=NeedsProfile(**needs_raw) if isinstance(needs_raw, dict) else NeedsProfile(),
-            media_urls=payload.get("media_urls", []),
-            status=IncidentStatus(payload.get("status", "REPORTED")),
+            confidence=norm["confidence"],
+            severity=Priority(norm["severity"]),
+            needs=NeedsProfile(**norm["needs"]),
+            media_urls=norm.get("media_urls", []),
+            status=status,
         )
     except Exception as exc:  # noqa: BLE001
         logger.error("Failed to deserialise incident payload for %s: %s", cluster_id, exc)

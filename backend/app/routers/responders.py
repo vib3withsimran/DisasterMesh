@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.resource import get_resource_agent
 from app.db import get_db
+from app.models import ResponderRecord
 from app.schemas import (
     LocationUpdate,
     Responder,
@@ -122,3 +124,33 @@ async def update_status(
     if updated is None:
         raise HTTPException(status_code=404, detail=f"Responder '{responder_id}' not found")
     return updated
+
+
+# ── Bulk reset ────────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/reset",
+    summary="Reset all responders to available",
+    response_model=dict,
+)
+async def reset_all_responders(
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Force all non-available responders back to **available** status.
+
+    Clears `assigned_incident_id` and `eta_minutes` for every responder.
+    Useful for demo resets without reseeding the entire database.
+    """
+    stmt = (
+        update(ResponderRecord)
+        .values(
+            current_status="available",
+            assigned_incident_id=None,
+            eta_minutes=None,
+        )
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+    return {"reset": result.rowcount, "status": "all responders set to available"}

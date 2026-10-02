@@ -217,6 +217,11 @@ class VerificationAgent:
                 pass
         all_sources.append(proto.source)
 
+        canonical_text = canonical.get("text") or proto.text or ""
+        from app.incident_utils import derive_needs_from_text, derive_severity
+        init_needs_dict = derive_needs_from_text(canonical_text) if canonical_text else {}
+        init_severity = derive_severity({"text": canonical_text}, needs=init_needs_dict)
+
         verified = VerifiedIncident(
             cluster_id=cluster_result.cluster_id,
             source_provenance=list(dict.fromkeys(all_sources)),  # deduplicated, ordered
@@ -224,7 +229,8 @@ class VerificationAgent:
             lon=canonical["lon"],
             timestamp=datetime.fromtimestamp(canonical["timestamp_epoch"], tz=UTC),
             confidence=confidence,
-            needs=NeedsProfile(),
+            severity=init_severity,
+            needs=NeedsProfile(**init_needs_dict),
             media_urls=[],
             status=IncidentStatus.VERIFIED,
         )
@@ -426,6 +432,10 @@ class VerificationAgent:
         lon = proto.lon if proto.lon is not None else 0.0
 
         cluster_id = f"cluster_{uuid4()}"
+        from app.incident_utils import derive_needs_from_text, derive_severity
+        init_needs_dict = derive_needs_from_text(proto.text) if proto.text else {}
+        init_severity = derive_severity({"text": proto.text}, needs=init_needs_dict)
+
         verified = VerifiedIncident(
             cluster_id=cluster_id,
             source_provenance=[proto.source],
@@ -433,7 +443,8 @@ class VerificationAgent:
             lon=lon,
             timestamp=proto.timestamp,
             confidence=confidence,
-            needs=NeedsProfile(),
+            severity=init_severity,
+            needs=NeedsProfile(**init_needs_dict),
             media_urls=proto.media_urls,
             status=IncidentStatus.VERIFIED,
         )

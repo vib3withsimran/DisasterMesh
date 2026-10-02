@@ -71,13 +71,30 @@ async def _persist(
 
 
 async def _index_in_vector_store(proto: ProtoIncident) -> None:
-    """Embed proto incident and upsert to Qdrant vector store."""
+    """Embed proto incident and upsert to Qdrant vector store, then run verification & assessment."""
     try:
         embedder = get_embedding_service()
         store = get_vector_store()
 
         vector = await embedder.embed_incident(proto)
         await store.upsert(proto, vector)
+
+        # Automatically run verification & victim assessment to form clusters
+        try:
+            from app.agents.verification import get_verification_agent
+            from app.agents.victim import get_victim_agent
+
+            ver_agent = get_verification_agent()
+            verified = await ver_agent.verify(proto)
+            if verified and proto.text:
+                vic_agent = get_victim_agent()
+                assessment = await vic_agent.assess(verified, text=proto.text)
+                verified.severity = assessment.priority
+                verified.needs = assessment.needs
+                vec = await embedder.embed_incident(proto)
+                await store.upsert_verified(verified, vec)
+        except Exception as ver_exc:
+            logger.debug("Automatic verification skipped for %s: %s", proto.id, ver_exc)
 
     except Exception as exc:
         logger.warning(
