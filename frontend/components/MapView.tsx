@@ -140,6 +140,7 @@ export default function MapView({
     });
 
     map.current.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.current.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
     // Add pulse animation CSS
     const style = document.createElement("style");

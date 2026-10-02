@@ -204,7 +204,7 @@ async def feed_random_tweets(
         for i in range(count):
             tweet = _generate_random_tweet()
             payload = {
-                "source": "social",
+                "source": "tweet",
                 "text": tweet["text"],
                 "lat": tweet["location"]["lat"],
                 "lon": tweet["location"]["lon"],
@@ -234,6 +234,14 @@ async def feed_random_tweets(
 
 if __name__ == "__main__":
     import argparse
+
+    # Load .env.local if present
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env.local")
+    except ImportError:
+        pass
 
     parser = argparse.ArgumentParser(
         description="Twitter simulation feed for DisasterMesh (Nepal floods)"
