@@ -60,11 +60,12 @@ async def _fetch_incident(cluster_id: str, vector_store: VectorStore) -> Verifie
             ts = datetime.now(UTC)
 
         needs_raw = payload.get("needs") or {}
+        cid = payload.get("cluster_id") or payload.get("proto_id") or payload.get("id") or cluster_id
         incident = VerifiedIncident(
-            cluster_id=payload["cluster_id"],
+            cluster_id=cid,
             source_provenance=payload.get("source_provenance", []),
-            lat=payload["lat"],
-            lon=payload["lon"],
+            lat=payload.get("lat") or 0.0,
+            lon=payload.get("lon") or 0.0,
             timestamp=ts,
             confidence=payload.get("confidence", 0.5),
             severity=Priority(payload.get("severity", "P4")),

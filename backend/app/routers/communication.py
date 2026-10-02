@@ -45,7 +45,10 @@ from app.models import CommunicationLog
 from app.schemas import (
     CommLogEntry,
     IncidentStatus,
+    NeedsProfile,
+    Priority,
     SituationalSummary,
+    SourceType,
     StatusTransitionRequest,
     VerifiedIncident,
 )
@@ -131,13 +134,26 @@ async def _get_verified_incident(cluster_id: str) -> VerifiedIncident:
             ts = datetime.now(UTC)
 
         needs_raw = payload.get("needs") or {}
-        from app.schemas import NeedsProfile, Priority, SourceType
+        cid = payload.get("cluster_id") or payload.get("proto_id") or payload.get("id") or cluster_id
+        sources = []
+        for s in payload.get("source_provenance", []):
+            try:
+                sources.append(SourceType(s))
+            except Exception:
+                pass
+        if not sources:
+            src = payload.get("source")
+            if src:
+                try:
+                    sources.append(SourceType(src))
+                except Exception:
+                    pass
 
         return VerifiedIncident(
-            cluster_id=payload["cluster_id"],
-            source_provenance=[SourceType(s) for s in payload.get("source_provenance", [])],
-            lat=payload["lat"],
-            lon=payload["lon"],
+            cluster_id=cid,
+            source_provenance=sources,
+            lat=payload.get("lat") or 0.0,
+            lon=payload.get("lon") or 0.0,
             timestamp=ts,
             confidence=payload.get("confidence", 0.5),
             severity=Priority(payload.get("severity", "P4")),
@@ -146,6 +162,7 @@ async def _get_verified_incident(cluster_id: str) -> VerifiedIncident:
             status=IncidentStatus(payload.get("status", "REPORTED")),
         )
     except Exception as exc:  # noqa: BLE001
+        logger.error("Failed to deserialise incident payload for %s: %s", cluster_id, exc)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to deserialise incident payload: {exc}",

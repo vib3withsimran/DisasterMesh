@@ -21,15 +21,30 @@ const STATUS_COLORS: Record<string, string> = {
   RESOLVED: "#64748b",
 };
 
-// Tile URLs per language
-const TILE_URLS: Record<string, string> = {
-  en: "https://tiles.openstreetmap.fr/en/{z}/{x}/{y}.png",
-  local: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+// Tile URLs — 100% free, high-resolution global coverage, NO watermark, NO missing tiles
+const TILE_CONFIG: Record<string, { url: string; attribution: string; dark: boolean }> = {
+  dark: {
+    url: "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+    attribution: "&copy; OpenStreetMap contributors",
+    dark: true,
+  },
+  satellite: {
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "&copy; Esri &mdash; World Imagery",
+    dark: false,
+  },
 };
 
-const TILE_ATTRIBUTIONS: Record<string, string> = {
-  en: "Map data &copy; OpenStreetMap contributors, Tiles by Stamen Design",
-  local: "Map data &copy; OpenStreetMap contributors",
+const DARK_PAINT = {
+  "raster-saturation": -0.85,
+  "raster-brightness-max": 0.45,
+  "raster-contrast": 0.25,
+};
+
+const NORMAL_PAINT = {
+  "raster-saturation": 0,
+  "raster-brightness-max": 1,
+  "raster-contrast": 0,
 };
 
 function createIncidentMarker(el: HTMLElement, severity: string, status: string) {
@@ -69,18 +84,28 @@ export default function MapView({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
-  const [mapLanguage, setMapLanguage] = useState<"en" | "local">("en");
+  const [mapMode, setMapMode] = useState<"dark" | "satellite">("dark");
 
-  // Switch tile source when language changes
-  const switchLanguage = useCallback((lang: "en" | "local") => {
+  // Switch tile source and paint properties when mode changes
+  const switchMode = useCallback((mode: "dark" | "satellite") => {
     if (!map.current) return;
+    const cfg = TILE_CONFIG[mode];
     const style = map.current.getStyle();
     if (style.sources.osm) {
-      (style.sources.osm as any).tiles = [TILE_URLS[lang]];
-      (style.sources.osm as any).attribution = TILE_ATTRIBUTIONS[lang];
+      (style.sources.osm as any).tiles = [cfg.url];
+      (style.sources.osm as any).attribution = cfg.attribution;
       map.current.setStyle(style);
+
+      const paint = cfg.dark ? DARK_PAINT : NORMAL_PAINT;
+      Object.entries(paint).forEach(([k, v]) => {
+        try {
+          map.current?.setPaintProperty("osm", k, v);
+        } catch {
+          // Ignore if layer not ready
+        }
+      });
     }
-    setMapLanguage(lang);
+    setMapMode(mode);
   }, []);
 
   // Initialize map
@@ -94,9 +119,9 @@ export default function MapView({
         sources: {
           osm: {
             type: "raster",
-            tiles: [TILE_URLS.en],
+            tiles: [TILE_CONFIG.dark.url],
             tileSize: 256,
-            attribution: TILE_ATTRIBUTIONS.en,
+            attribution: TILE_CONFIG.dark.attribution,
           },
         },
         layers: [
@@ -104,16 +129,12 @@ export default function MapView({
             id: "osm",
             type: "raster",
             source: "osm",
-            paint: {
-              "raster-brightness-max": 0.9,
-              "raster-saturation": 0,
-              "raster-contrast": 0.05,
-            },
+            paint: DARK_PAINT,
           },
         ],
       },
       center: [85.324, 27.7172],
-      zoom: 10,
+      zoom: 11,
       pitch: 0,
       attributionControl: false,
     });
@@ -265,33 +286,33 @@ export default function MapView({
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* Language toggle */}
+      {/* Map Mode toggle */}
       <div
-        className="absolute top-2 left-2 z-10 flex rounded-lg overflow-hidden border"
+        className="absolute top-2 left-2 z-10 flex rounded-lg overflow-hidden border shadow-lg"
         style={{
           background: "var(--bg-card)",
           borderColor: "var(--border-subtle)",
         }}
       >
         <button
-          onClick={() => switchLanguage("en")}
-          className="px-3 py-1.5 text-[10px] font-medium transition-colors"
+          onClick={() => switchMode("dark")}
+          className="px-3 py-1.5 text-[11px] font-semibold transition-colors flex items-center gap-1.5"
           style={{
-            background: mapLanguage === "en" ? "var(--accent-blue)" : "transparent",
-            color: mapLanguage === "en" ? "white" : "var(--text-secondary)",
+            background: mapMode === "dark" ? "var(--accent-blue)" : "transparent",
+            color: mapMode === "dark" ? "white" : "var(--text-secondary)",
           }}
         >
-          English
+          <span>🌙</span> Dark Map
         </button>
         <button
-          onClick={() => switchLanguage("local")}
-          className="px-3 py-1.5 text-[10px] font-medium transition-colors"
+          onClick={() => switchMode("satellite")}
+          className="px-3 py-1.5 text-[11px] font-semibold transition-colors flex items-center gap-1.5"
           style={{
-            background: mapLanguage === "local" ? "var(--accent-blue)" : "transparent",
-            color: mapLanguage === "local" ? "white" : "var(--text-secondary)",
+            background: mapMode === "satellite" ? "var(--accent-blue)" : "transparent",
+            color: mapMode === "satellite" ? "white" : "var(--text-secondary)",
           }}
         >
-          Local
+          <span>🛰️</span> Satellite
         </button>
       </div>
     </div>
