@@ -22,8 +22,10 @@ from app.db import get_db
 from app.schemas import (
     DispatchResult,
     DispatchStatus,
+    IncidentStatus,
     NeedsProfile,
     Priority,
+    SourceType,
     VerifiedIncident,
 )
 
