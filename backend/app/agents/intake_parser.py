@@ -88,7 +88,7 @@ class IntakeParserAgent:
             return env_val.strip()
         from app.config import get_settings
 
-        return (get_settings().groq_model or "llama-3.3-70b-versatile").strip()
+        return (get_settings().groq_model or "openai/gpt-oss-120b").strip()
 
     def is_available(self) -> bool:
         """Return True if GROQ_API_KEY is configured."""
