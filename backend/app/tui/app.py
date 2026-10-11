@@ -120,6 +120,9 @@ class IncidentDetail(Static):
         # Format sources
         sources_str = ", ".join(sources) if sources else "?"
 
+        # Raw message text (any language)
+        raw_text = d.get("text", "").strip()
+
         lines = [
             f"  ID: {cluster_id}",
             f"  Status: [bold]{status}[/bold]",
@@ -128,10 +131,21 @@ class IncidentDetail(Static):
             f"  Location: {lat:.4f}, {lon:.4f}",
             f"  Time: {ts}",
             f"  Sources: {sources_str}",
-            "",
-            "  -- Needs --",
-            needs_str,
         ]
+
+        # -- Original Message block (any language) ----------------------------
+        if raw_text:
+            lines.append("")
+            lines.append("  [bold cyan]── Original Message ──[/bold cyan]")
+            # Wrap long text at ~50 chars so it fits the panel
+            import textwrap
+            wrapped = textwrap.fill(raw_text, width=50, subsequent_indent="  ")
+            for line in wrapped.splitlines():
+                lines.append(f"  {line}")
+
+        lines.append("")
+        lines.append("  [bold]── Needs ──[/bold]")
+        lines.append(needs_str)
 
         # Add assignment info if present
         assignments = d.get("assignments", [])
@@ -243,7 +257,7 @@ class DisasterMeshTUI(App):
             "Sources",
             "Lat",
             "Lon",
-            "Cluster ID",
+            "Message",
         )
 
         # Initial data load
@@ -257,6 +271,24 @@ class DisasterMeshTUI(App):
 
         # Log startup
         self._log_event("[bold green]OK[/bold green] Dashboard connected to API")
+
+        # Report Groq LLM status
+        try:
+            import os
+            groq_key = os.getenv("GROQ_API_KEY", "").strip()
+            groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+            if groq_key:
+                self._log_event(
+                    f"[bold green]AI[/bold green] Groq LLM active — model: [cyan]{groq_model}[/cyan] "
+                    "| Smart intake parsing [bold green]ENABLED[/bold green]"
+                )
+            else:
+                self._log_event(
+                    "[yellow]AI[/yellow] Groq LLM [yellow]DISABLED[/yellow] — "
+                    "add GROQ_API_KEY to backend/.env to enable AI parsing"
+                )
+        except Exception:
+            pass
 
     async def on_unmount(self) -> None:
         """Clean up resources."""
@@ -376,6 +408,10 @@ class DisasterMeshTUI(App):
             # Status icon
             status_display = f"{STATUS_ICONS.get(status, '[??]')} {status}"
 
+            # Message preview — first 45 chars of the raw text
+            raw_text = inc.get("text", "").strip()
+            msg_preview = (raw_text[:45] + "…") if len(raw_text) > 45 else (raw_text or "--")
+
             table.add_row(
                 f"[{PRIORITY_STYLES.get(severity, '')}]{severity}[/]",
                 status_display,
@@ -383,7 +419,7 @@ class DisasterMeshTUI(App):
                 sources_display,
                 f"{lat:.4f}",
                 f"{lon:.4f}",
-                cluster_id[:20] + "…" if len(cluster_id) > 20 else cluster_id,
+                msg_preview,
                 key=cluster_id,  # full UUID stored as row key for dispatch/summary
             )
 
@@ -586,8 +622,10 @@ class DisasterMeshTUI(App):
             return
 
         human = result.get("human_summary", "No summary available")
-        # Write plain text (no Rich markup) to avoid parse errors with emoji/box chars
-        self._log_event("[bold cyan]── Situational Summary ──[/bold cyan]")
+        is_ai = human.strip().startswith("[AI BRIEFING")
+        header_style = "[bold cyan]" if is_ai else "[bold]"
+        header_label = "── AI Situational Briefing ──" if is_ai else "── Situational Summary ──"
+        self._log_event(f"{header_style}{header_label}[/]")
         log = self.query_one("#event-log", RichLog)
         log.write(human)
 

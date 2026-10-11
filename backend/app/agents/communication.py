@@ -34,6 +34,7 @@ from app.schemas import (
     SituationalSummary,
     VerifiedIncident,
 )
+from app.agents.intake_parser import get_intake_parser
 
 logger = logging.getLogger(__name__)
 
@@ -335,7 +336,9 @@ class CommunicationAgent:
         responder_block = "\n".join(responder_lines) if responder_lines else "  • None assigned yet"
 
         now = datetime.now(UTC)
-        human_summary = (
+
+        # ── Build the structured template (always available as fallback) ──────
+        template_summary = (
             "╔══════════════════════════════════════════╗\n"
             "║       DISASTERMESH INCIDENT SUMMARY      ║\n"
             "╚══════════════════════════════════════════╝\n"
@@ -353,6 +356,68 @@ class CommunicationAgent:
             f"\n"
             f"🚒 Assigned Responders:\n{responder_block}\n"
         )
+
+        # ── Try Groq LLM for a richer narrative summary ───────────────────────
+        human_summary = template_summary
+        parser = get_intake_parser()
+        if parser.is_available():
+            try:
+                from langchain_core.messages import HumanMessage, SystemMessage
+                from langchain_groq import ChatGroq
+                from pydantic import SecretStr
+                import os
+
+                api_key = os.getenv("GROQ_API_KEY", "").strip()
+                model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+
+                llm = ChatGroq(
+                    api_key=SecretStr(api_key),
+                    model=model,
+                    temperature=0.3,
+                    timeout=20.0,
+                    max_retries=0,
+                )
+
+                active_needs = [k for k, v in incident.needs.model_dump().items() if v]
+                responder_names = [a.responder_name for a in assigned]
+
+                prompt = f"""You are an incident commander's assistant in a disaster response system.
+Write a concise, professional situational briefing (5-8 sentences) for the following incident.
+Do NOT use bullet points or headers — write flowing prose as if briefing a senior officer over radio.
+Include: what happened, location, urgency, what aid is needed, and responder status.
+
+Incident data:
+- Cluster ID: {incident.cluster_id}
+- Severity: {incident.severity} ({{'P1': 'CRITICAL', 'P2': 'HIGH', 'P3': 'MEDIUM', 'P4': 'LOW'}}.get(str(incident.severity), ''))
+- Status: {incident.status}
+- Confidence: {incident.confidence:.0%}
+- Location: {incident.lat:.4f}°N, {incident.lon:.4f}°E
+- Reported: {incident.timestamp.strftime('%H:%M UTC on %d %b %Y')}
+- Sources: {', '.join(str(s) for s in incident.source_provenance)}
+- Needs identified: {', '.join(active_needs) if active_needs else 'none yet identified'}
+- Assigned responders: {', '.join(responder_names) if responder_names else 'none yet'}"""
+
+                resp = await llm.ainvoke([
+                    SystemMessage(content="You are a precise, calm disaster response briefing officer."),
+                    HumanMessage(content=prompt),
+                ])
+                llm_text = resp.content.strip() if hasattr(resp, "content") else ""
+                if llm_text:
+                    human_summary = (
+                        f"[AI BRIEFING — {now.strftime('%H:%M UTC')}]\n\n"
+                        f"{llm_text}\n\n"
+                        f"--- Structured Data ---\n"
+                        f"Cluster: {incident.cluster_id} | "
+                        f"Severity: {incident.severity} | "
+                        f"Status: {incident.status} | "
+                        f"Confidence: {incident.confidence:.0%}\n"
+                        f"Location: {incident.lat:.5f}, {incident.lon:.5f} | "
+                        f"Reported: {incident.timestamp.strftime('%Y-%m-%d %H:%M UTC')}"
+                    )
+                    logger.info("Groq generated situational summary for %s", incident.cluster_id)
+            except Exception as err:
+                logger.warning("Groq summary generation failed, using template: %s", err)
+                human_summary = template_summary
 
         return SituationalSummary(
             cluster_id=incident.cluster_id,

@@ -107,9 +107,16 @@ export default function IncidentSidebar({
                   {(inc.confidence * 100).toFixed(0)}%
                 </span>
               </div>
-              <p className="text-[10px] truncate mt-1 font-mono" style={{ color: "var(--text-muted)" }}>
-                {inc.cluster_id?.slice(0, 24) ?? "--"}
-              </p>
+              {/* Raw citizen message snippet */}
+              {inc.text ? (
+                <p className="text-[11px] mt-1.5 truncate leading-tight" style={{ color: "var(--text-secondary)" }}>
+                  💬 {inc.text}
+                </p>
+              ) : (
+                <p className="text-[10px] truncate mt-1 font-mono" style={{ color: "var(--text-muted)" }}>
+                  {inc.cluster_id?.slice(0, 24) ?? "--"}
+                </p>
+              )}
             </button>
           );
         })}

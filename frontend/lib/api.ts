@@ -50,6 +50,8 @@ export interface Incident {
   needs: NeedsProfile;
   media_urls: string[];
   status: IncidentStatus;
+  /** Raw original message text from the citizen / source (may be multilingual). */
+  text?: string;
 }
 
 export interface Responder {

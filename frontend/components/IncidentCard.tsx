@@ -136,6 +136,33 @@ export default function IncidentCard({ incident, onDispatch }: IncidentCardProps
         ))}
       </div>
 
+      {/* Original citizen message */}
+      {incident.text && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--accent-blue)" }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+              Original Message
+            </p>
+          </div>
+          <div
+            className="rounded-lg p-2.5 text-[12px] leading-relaxed"
+            style={{
+              background: "rgba(59,130,246,0.06)",
+              border: "1px solid rgba(59,130,246,0.18)",
+              color: "var(--text-secondary)",
+              fontFamily: "inherit",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+            }}
+          >
+            {incident.text}
+          </div>
+        </div>
+      )}
+
       {/* Needs */}
       {activeNeeds.length > 0 && (
         <div>

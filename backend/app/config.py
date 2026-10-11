@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     # ── Groq LLM ──────────────────────────────────────────────────────────────
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-120b"
-    groq_timeout_s: int = 10
+    groq_timeout_s: int = 20
 
     # ── Exa Social Media Monitor ───────────────────────────────────────────────
     exa_api_key: str = ""

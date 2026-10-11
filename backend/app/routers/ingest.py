@@ -199,9 +199,70 @@ async def ingest_social_post(
     post: SocialPostInput,
     db: AsyncSession = Depends(get_db),
 ) -> IngestResponse:
-    """Accept a social media post (tweet, news article)."""
-    proto = await _situational_agent.process_social_post(post)
-    language = proto.metadata.get("language", "en")
+    """Accept a social media post (tweet, news article).
+
+    If GROQ_API_KEY is configured, runs the LLM intake parser to extract
+    location, language, incident type, needs and urgency — same pipeline
+    as citizen reports.  Falls back to standard rule-based processing if
+    the LLM is unavailable or fails.
+    """
+    parser = get_intake_parser()
+    queue = get_intake_queue()
+
+    if parser.is_available() and post.text:
+        try:
+            parsed = await parser.parse(post.text)
+            logger.info(
+                "LLM Smart Intake parsed social post: addr=%s lang=%s urgency=%d",
+                parsed.address,
+                parsed.language,
+                parsed.urgency_level,
+            )
+
+            # GPS coords on the post always win; fall back to LLM → geocode
+            lat, lon = post.lat, post.lon
+            if (lat is None or lon is None) and (parsed.lat is not None and parsed.lon is not None):
+                lat, lon = parsed.lat, parsed.lon
+
+            address = parsed.address
+            if (lat is None or lon is None) and address:
+                resolved = await _situational_agent._geocode(address)
+                if resolved:
+                    lat, lon = resolved
+
+            ts = post.timestamp or datetime.now(UTC)
+            from app.schemas import ProtoIncident as _PI
+            proto = _PI(
+                source=post.source,
+                text=parsed.cleaned_text or post.text,
+                lat=lat,
+                lon=lon,
+                address=address,
+                timestamp=ts,
+                metadata={
+                    "language": parsed.language,
+                    "incident_type": parsed.incident_type,
+                    "urgency_level": parsed.urgency_level,
+                    "time_reference": parsed.time_reference,
+                    "extracted_needs": parsed.needs.model_dump(),
+                    "llm_parsed": True,
+                    "original_url": post.url,
+                },
+                raw_payload=post.model_dump(),
+            )
+            language = parsed.language
+        except Exception as err:
+            logger.warning(
+                "IntakeParserAgent failed for social post (%s); falling back to default pipeline",
+                err,
+            )
+            proto = await _situational_agent.process_social_post(post)
+            language = proto.metadata.get("language", "en")
+            await queue.enqueue(proto.id, post.model_dump())
+    else:
+        proto = await _situational_agent.process_social_post(post)
+        language = proto.metadata.get("language", "en")
+
     await _persist(
         db,
         proto.id,
@@ -211,7 +272,11 @@ async def ingest_social_post(
         language,
     )
     await _index_in_vector_store(proto)
-    logger.info("Social post ingested id=%s", proto.id)
+    logger.info(
+        "Social post ingested id=%s (llm_parsed=%s)",
+        proto.id,
+        proto.metadata.get("llm_parsed", False),
+    )
     return IngestResponse(message_id=proto.id, lat=proto.lat, lon=proto.lon)
 
 
